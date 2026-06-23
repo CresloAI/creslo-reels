@@ -7,11 +7,12 @@ node_modules/
 
 # Render output
 out/
+dist/
+build/
 *.mp4
 
-# Remotion / build caches
+# Remotion caches
 .remotion/
-build/
 
 # OS noise
 .DS_Store
