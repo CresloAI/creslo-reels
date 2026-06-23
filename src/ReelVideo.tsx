@@ -21,7 +21,11 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
   const seedStr = String(reel.caption || (reel.hook && reel.hook.on_screen) || '')
   let seed = 0
   for (let i = 0; i < seedStr.length; i++) seed = (seed * 31 + seedStr.charCodeAt(i)) >>> 0
-  const captionStyle = CAPTION_STYLES[seed % CAPTION_STYLES.length]
+  // Honour the user's picked caption style when present and valid; otherwise fall back
+  // to the per-reel hash-select so un-picked reels still vary.
+  const captionStyle = CAPTION_STYLES.includes(reel.captionStyle as CaptionStyle)
+    ? (reel.captionStyle as CaptionStyle)
+    : CAPTION_STYLES[seed % CAPTION_STYLES.length]
 
   const presentations = [
     fade(),
