@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit (holds REMOTION_AWS_ACCESS_KEY_ID / SECRET)
+.env
+.env.*
+
+# Render output
+out/
+*.mp4
+
+# Remotion / build caches
+.remotion/
+build/
+
+# OS noise
+.DS_Store
+Thumbs.db

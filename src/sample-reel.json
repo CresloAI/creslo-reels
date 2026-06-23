@@ -1,0 +1,15 @@
+{
+  "hook": { "on_screen": "Fresh cut incoming", "voiceover": "This is what a good barber does before the first snip even happens." },
+  "scenes": [
+    { "on_screen": "The consultation matters", "voiceover": "A proper look at the shape and the growth.", "clip_url": null, "seconds": 3 },
+    { "on_screen": "Clipper guard on, lines set", "voiceover": "Every move is deliberate. This isn't rushed.", "clip_url": null, "seconds": 3 },
+    { "on_screen": "The detail work", "voiceover": "The fade, the edge, the tidy-up round the ears.", "clip_url": null, "seconds": 3 },
+    { "on_screen": "Hot towel finish", "voiceover": "That's what coming back for the experience looks like.", "clip_url": null, "seconds": 3 }
+  ],
+  "caption": "The cut does the talking.",
+  "hashtags": ["#prestonbarber", "#lancashirebusiness", "#barbershopuk"],
+  "audio": "Smooth lo-fi hip-hop beat, warm and confident",
+  "brandColor": "#D86A3C",
+  "captionStyle": "pop",
+  "hookSeconds": 2.5
+}
