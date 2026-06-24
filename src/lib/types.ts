@@ -13,6 +13,23 @@ export type ReelScene = {
 export const CAPTION_STYLE_KEYS = ['pop', 'karaoke', 'clean', 'bold_box', 'typewriter', 'lower_third', 'big_subtitle', 'highlighter'] as const
 export type CaptionStyle = typeof CAPTION_STYLE_KEYS[number]
 
+// Per-style visual config — the data the Captions render reads for every visual
+// decision. accent is a literal hex OR the sentinel 'brand' (= reel.brandColor).
+// A future inputProps.captionConfig can override any field per style (B7) with no redeploy.
+export type StyleConfig = {
+  font: string
+  textColor: string
+  accent: string
+  weight: number
+  uppercase: boolean
+  sizeMul: number
+  placement: 'center' | 'lowerThird'
+  reveal: 'wordSpring' | 'typewriter' | 'fade'
+  activeFx: 'none' | 'color' | 'box' | 'highlight'
+  stroke: boolean
+  band?: { fill: string; accentEdge: string }
+}
+
 export type ReelData = {
   hook?: { on_screen?: string; voiceover?: string; clip_url?: string | null; poster?: string | null } | null
   scenes?: ReelScene[]
@@ -22,6 +39,7 @@ export type ReelData = {
   // Look & feel
   brandColor?: string
   captionStyle?: CaptionStyle
+  captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   hookSeconds?: number
 }
 

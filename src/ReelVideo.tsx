@@ -59,6 +59,7 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
           index={i}
           durationInFrames={frames}
           captionStyle={captionStyle}
+          captionConfig={reel.captionConfig}
         />
       </TransitionSeries.Sequence>
     )

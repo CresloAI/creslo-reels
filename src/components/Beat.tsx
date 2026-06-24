@@ -1,7 +1,7 @@
 import React from 'react'
 import { AbsoluteFill, OffthreadVideo, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
 import { Captions } from './Captions'
-import type { CaptionStyle } from '../lib/types'
+import type { CaptionStyle, StyleConfig } from '../lib/types'
 
 function shade(hex: string, amt: number) {
   // lighten/darken a hex colour by amt (-1..1)
@@ -21,7 +21,8 @@ export const Beat: React.FC<{
   index: number
   durationInFrames: number
   captionStyle?: CaptionStyle
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle }) => {
+  captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig }) => {
   const frame = useCurrentFrame()
 
   // Quick fade-in for a clean cut into each beat.
@@ -54,7 +55,7 @@ export const Beat: React.FC<{
         }}
       />
 
-      <Captions text={text} accent={accent} isHook={isHook} style={captionStyle} durationInFrames={durationInFrames} />
+      <Captions text={text} accent={accent} isHook={isHook} style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} />
     </AbsoluteFill>
   )
 }
