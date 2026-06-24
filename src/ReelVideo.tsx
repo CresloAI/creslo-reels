@@ -5,10 +5,11 @@ import { fade } from '@remotion/transitions/fade'
 import { slide } from '@remotion/transitions/slide'
 import { wipe } from '@remotion/transitions/wipe'
 import { Beat } from './components/Beat'
-import { buildBeats, TRANSITION_FRAMES, type ReelData, type CaptionStyle } from './lib/types'
+import { buildBeats, TRANSITION_FRAMES, CAPTION_STYLE_KEYS, type ReelData, type CaptionStyle } from './lib/types'
 
-// Caption looks the Captions component understands. Picked per reel below.
-const CAPTION_STYLES: CaptionStyle[] = ['pop', 'karaoke', 'clean']
+// The hash-select fallback (for an absent/invalid captionStyle) is limited to the
+// original 3 styles, so the 5 newer styles only ever render when explicitly picked.
+const FALLBACK_STYLES = ['pop', 'karaoke', 'clean'] as const
 
 export const ReelVideo: React.FC<ReelData> = (reel) => {
   const { fps, durationInFrames } = useVideoConfig()
@@ -23,9 +24,9 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
   for (let i = 0; i < seedStr.length; i++) seed = (seed * 31 + seedStr.charCodeAt(i)) >>> 0
   // Honour the user's picked caption style when present and valid; otherwise fall back
   // to the per-reel hash-select so un-picked reels still vary.
-  const captionStyle = CAPTION_STYLES.includes(reel.captionStyle as CaptionStyle)
+  const captionStyle = CAPTION_STYLE_KEYS.includes(reel.captionStyle as CaptionStyle)
     ? (reel.captionStyle as CaptionStyle)
-    : CAPTION_STYLES[seed % CAPTION_STYLES.length]
+    : FALLBACK_STYLES[seed % FALLBACK_STYLES.length]
 
   const presentations = [
     fade(),

@@ -8,7 +8,10 @@ export type ReelScene = {
   seconds?: number
 }
 
-export type CaptionStyle = 'pop' | 'karaoke' | 'clean'
+// Single source of truth for caption-style keys. The union AND the render-side
+// validation list (ReelVideo.tsx) both derive from this, so adding a style is one edit.
+export const CAPTION_STYLE_KEYS = ['pop', 'karaoke', 'clean', 'bold_box', 'typewriter', 'lower_third', 'big_subtitle', 'highlighter'] as const
+export type CaptionStyle = typeof CAPTION_STYLE_KEYS[number]
 
 export type ReelData = {
   hook?: { on_screen?: string; voiceover?: string; clip_url?: string | null; poster?: string | null } | null
