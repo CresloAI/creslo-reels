@@ -6,6 +6,8 @@ export type ReelScene = {
   poster?: string | null
   clip_id?: number | string | null
   seconds?: number
+  // Keyword-emphasis: indices into on_screen.split(/\s+/).filter(Boolean) - the word(s) to emphasise.
+  emphasis?: number[]
 }
 
 // Single source of truth for caption-style keys. The union AND the render-side
@@ -18,6 +20,8 @@ export type CaptionStyle = typeof CAPTION_STYLE_KEYS[number]
 // A future inputProps.captionConfig can override any field per style (B7) with no redeploy.
 export type StyleConfig = {
   font: string
+  // Optional display font for the emphasised (keyword) word; the rest use `font`.
+  fontSecondary?: string
   textColor: string
   accent: string
   weight: number
@@ -31,7 +35,7 @@ export type StyleConfig = {
 }
 
 export type ReelData = {
-  hook?: { on_screen?: string; voiceover?: string; clip_url?: string | null; poster?: string | null } | null
+  hook?: { on_screen?: string; voiceover?: string; clip_url?: string | null; poster?: string | null; emphasis?: number[] } | null
   scenes?: ReelScene[]
   caption?: string
   hashtags?: string[]
@@ -41,6 +45,12 @@ export type ReelData = {
   captionStyle?: CaptionStyle
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   hookSeconds?: number
+  // v2 inert plumbing (passed through buildReelRenderProps; the render half consumes these
+  // later. Absent -> current behaviour). Shapes are placeholders, refined when each is built.
+  transition?: string
+  header?: { text?: string; enabled?: boolean } | null
+  grade?: string | null
+  kenBurns?: { enabled?: boolean; intensity?: number } | null
 }
 
 export const FPS = 30
@@ -58,6 +68,7 @@ export type Beat = {
   isHook: boolean
   clipUrl?: string | null
   seconds: number
+  emphasis?: number[]
 }
 
 export function buildBeats(reel: ReelData): Beat[] {
@@ -73,6 +84,7 @@ export function buildBeats(reel: ReelData): Beat[] {
       // repeats beat 1's footage. Falls back to scene 1 only if none was set.
       clipUrl: (hook && hook.clip_url) ? hook.clip_url : (scenes[0] ? scenes[0].clip_url : null),
       seconds: Math.max(1.5, Math.min(5, Number(reel.hookSeconds) || 2.5)),
+      emphasis: (hook && hook.emphasis) || [],
     })
   }
   for (const s of scenes) {
@@ -81,9 +93,10 @@ export function buildBeats(reel: ReelData): Beat[] {
       isHook: false,
       clipUrl: s.clip_url || null,
       seconds: Math.max(1.5, Math.min(10, Number(s.seconds) || 3)),
+      emphasis: s.emphasis || [],
     })
   }
-  if (!beats.length) beats.push({ text: '', isHook: true, clipUrl: null, seconds: 3 })
+  if (!beats.length) beats.push({ text: '', isHook: true, clipUrl: null, seconds: 3, emphasis: [] })
   return beats
 }
 

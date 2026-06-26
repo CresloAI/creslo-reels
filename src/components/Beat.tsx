@@ -22,7 +22,8 @@ export const Beat: React.FC<{
   durationInFrames: number
   captionStyle?: CaptionStyle
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig }) => {
+  emphasis?: number[]
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis }) => {
   const frame = useCurrentFrame()
 
   // Quick fade-in for a clean cut into each beat.
@@ -55,7 +56,7 @@ export const Beat: React.FC<{
         }}
       />
 
-      <Captions text={text} accent={accent} isHook={isHook} style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} />
+      <Captions text={text} accent={accent} isHook={isHook} style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
     </AbsoluteFill>
   )
 }

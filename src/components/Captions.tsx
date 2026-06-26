@@ -47,6 +47,16 @@ function hexA(hex: string, a: number) {
   return `rgba(${r},${g},${b},${a})`
 }
 
+// Filler words the keyword-emphasis fallback skips so the time-sweep never lands on them.
+// MUST stay byte-identical to the frontend mirror src/remotion/ReelVideo.tsx.
+const CAPTION_STOPWORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'but', 'of', 'to', 'in', 'on', 'at', 'for', 'from', 'by', 'with', 'as',
+  'is', 'are', 'was', 'were', 'be', 'been', 'am', 'it', 'its', 'this', 'that', 'these', 'those',
+  'i', 'you', 'your', 'we', 'our', 'my', 'me', 'he', 'she', 'they', 'them', 'his', 'her', 'their',
+  'so', 'if', 'then', 'than', 'too', 'very', 'just', 'up', 'out', 'off', 'over', 'into', 'about',
+])
+const normWord = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, '')
+
 export const Captions: React.FC<{
   text: string
   accent: string
@@ -54,7 +64,8 @@ export const Captions: React.FC<{
   style?: CaptionStyle
   durationInFrames: number
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
-}> = ({ text, accent, isHook, style = 'pop', durationInFrames, captionConfig }) => {
+  emphasis?: number[]
+}> = ({ text, accent, isHook, style = 'pop', durationInFrames, captionConfig, emphasis }) => {
   const frame = useCurrentFrame()
   const { fps, width } = useVideoConfig()
   const full = String(text || '').trim()
@@ -112,7 +123,18 @@ export const Captions: React.FC<{
 
   // ---- Word-map styles (wordSpring): pop, karaoke, clean, bold_box, big_subtitle, highlighter ----
   const fontSize = Math.round((isHook ? width * 0.092 : width * 0.068) * cfg.sizeMul)
-  const activeIdx = Math.min(words.length - 1, Math.floor(progress * words.length))
+  // Which word(s) to emphasise. Prefer the generation's keyword indices (bound-checked, so a
+  // stale index from a post-generation on_screen edit is dropped); else keep the time-sweep but
+  // over CONTENT words only, so it never lands on filler ("of/the/a/is").
+  const validEmph = (emphasis || []).filter((n) => Number.isInteger(n) && n >= 0 && n < words.length)
+  let emph: Set<number>
+  if (validEmph.length) {
+    emph = new Set(validEmph)
+  } else {
+    const content = words.map((_, i) => i).filter((i) => !CAPTION_STOPWORDS.has(normWord(words[i])))
+    const pool = content.length ? content : words.map((_, i) => i)
+    emph = new Set([pool[Math.min(pool.length - 1, Math.floor(progress * pool.length))]])
+  }
   const wrap: React.CSSProperties = {
     position: 'absolute', left: 0, right: 0,
     top: isHook ? '38%' : undefined, bottom: isHook ? undefined : '15%',
@@ -125,10 +147,11 @@ export const Captions: React.FC<{
         const enter = spring({ frame: frame - i * 2, fps, config: { damping: 14, mass: 0.6, stiffness: 140 } })
         const translateY = interpolate(enter, [0, 1], [fontSize * 0.45, 0])
         const grow = interpolate(enter, [0, 1], [0.7, 1])
-        const isActive = cfg.activeFx !== 'none' && i === activeIdx
+        const isActive = cfg.activeFx !== 'none' && emph.has(i)
         const pop = isActive && (cfg.activeFx === 'color' || cfg.activeFx === 'highlight') ? 1.08 : 1
+        // Font pairing: the emphasised (keyword) word uses the display font; the rest use the body font.
         const ws: React.CSSProperties = {
-          display: 'inline-block', fontFamily: cfg.font, fontWeight: cfg.weight, fontSize, lineHeight: 1.04,
+          display: 'inline-block', fontFamily: (cfg.fontSecondary && emph.has(i)) ? cfg.fontSecondary : cfg.font, fontWeight: cfg.weight, fontSize, lineHeight: 1.04,
           letterSpacing: isHook ? '-0.01em' : '0.005em', textTransform: cfg.uppercase ? 'uppercase' : 'none',
           color: cfg.textColor, opacity: enter,
           transform: `translateY(${translateY}px) scale(${grow * pop})`,
