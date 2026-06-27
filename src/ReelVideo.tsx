@@ -34,14 +34,13 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
     slide({ direction: 'from-bottom' }),
     wipe({ direction: 'from-right' }),
   ]
-  // Per-preset transitions: reel.transition (slice-1 plumbed) picks the presentation; absent or
-  // unknown key -> the per-reel hash-select below. Keys match the 5 mood presets.
+  // Per-preset transitions: reel.transition (set by the mood preset) picks the presentation;
+  // absent or unknown key -> the per-reel hash-select below. Keys are transition-type names.
   const TRANSITION_MAP = {
-    agency_dark: fade(),
-    studio_punch: slide({ direction: 'from-right' }),
-    editorial_soft: fade(),
-    hype_promo: wipe({ direction: 'from-right' }),
-    clean_product: slide({ direction: 'from-bottom' }),
+    'fade': fade(),
+    'slide-from-right': slide({ direction: 'from-right' }),
+    'slide-from-bottom': slide({ direction: 'from-bottom' }),
+    'wipe-from-right': wipe({ direction: 'from-right' }),
   }
   const mapped = reel.transition ? TRANSITION_MAP[reel.transition] : undefined
   const presentation = mapped || presentations[seed % presentations.length]
