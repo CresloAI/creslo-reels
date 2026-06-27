@@ -124,7 +124,7 @@ export const Captions: React.FC<{
 
   // ---- Lower Third: caption in a band pinned to the lower third (fade in) ----
   if (cfg.placement === 'lowerThird') {
-    const fontSize = isHook ? Math.round(width * 0.062) : Math.round(width * 0.05)
+    const fontSize = Math.round((isHook ? width * 0.062 : width * 0.05) * cfg.sizeMul)
     const appear = interpolate(frame, [0, 8], [0, 1], { extrapolateRight: 'clamp' })
     const bandFill = cfg.band ? cfg.band.fill : 'rgba(0,0,0,0.62)'
     const edge = cfg.band ? (cfg.band.accentEdge === 'brand' ? accent : cfg.band.accentEdge) : dec
@@ -163,6 +163,25 @@ export const Captions: React.FC<{
     top: isHook ? '38%' : undefined, bottom: isHook ? undefined : '15%',
     display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignContent: 'center',
     gap: `${fontSize * 0.12}px ${fontSize * 0.28}px`, padding: `0 ${width * 0.08}px`, textAlign: 'center',
+  }
+  // ---- Centre fade: the whole caption fades in as a block (no per-word spring). Used by
+  // Editorial Soft (reveal 'fade' on the centre path); keeps the body/display font pairing. ----
+  if (cfg.reveal === 'fade') {
+    const appear = interpolate(frame, [0, 10], [0, 1], { extrapolateRight: 'clamp' })
+    return (
+      <div style={{ ...wrap, opacity: appear }}>
+        {words.map((w, i) => (
+          <span key={i} style={{
+            display: 'inline-block', fontFamily: (cfg.fontSecondary && emph.has(i)) ? cfg.fontSecondary : cfg.font,
+            fontWeight: cfg.weight, fontSize, lineHeight: 1.04,
+            letterSpacing: isHook ? '-0.01em' : '0.005em', textTransform: cfg.uppercase ? 'uppercase' : 'none',
+            color: cfg.textColor,
+            WebkitTextStroke: cfg.stroke ? `${Math.max(1, fontSize * 0.012)}px rgba(0,0,0,0.85)` : undefined,
+            textShadow: '0 4px 18px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.7)',
+          }}>{w}</span>
+        ))}
+      </div>
+    )
   }
   return (
     <div style={wrap}>

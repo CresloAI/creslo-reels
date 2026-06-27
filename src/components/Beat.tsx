@@ -13,6 +13,16 @@ function shade(hex: string, amt: number) {
   return `rgb(${r},${g},${b})`
 }
 
+// CSS colour grades applied over the clip layer (driven by reel.grade). Absent -> no filter.
+// MUST stay byte-identical to the frontend mirror src/remotion/ReelVideo.tsx.
+const GRADE_PRESETS: Record<string, string> = {
+  warm: 'sepia(0.15) brightness(1.05) saturate(1.1)',
+  punchy: 'contrast(1.1) saturate(1.2)',
+  editorial: 'contrast(1.05) saturate(0.9) brightness(1.02)',
+  clean: 'brightness(1.03) saturate(1.05)',
+  neutral: 'none',
+}
+
 export const Beat: React.FC<{
   text: string
   isHook: boolean
@@ -23,19 +33,26 @@ export const Beat: React.FC<{
   captionStyle?: CaptionStyle
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   emphasis?: number[]
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis }) => {
+  kenBurns?: { enabled?: boolean; intensity?: number } | null
+  grade?: string | null
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, kenBurns, grade }) => {
   const frame = useCurrentFrame()
 
   // Quick fade-in for a clean cut into each beat.
   const opacity = interpolate(frame, [0, 5], [0, 1], { extrapolateRight: 'clamp' })
-  // Slow Ken Burns push; alternate direction per beat for variety.
+  // Slow Ken Burns push; alternate direction per beat for variety. Intensity from reel.kenBurns
+  // (absent -> 1 = current default; enabled:false or 0 -> static; >1 -> more dramatic).
   const dir = index % 2 === 0 ? 1 : -1
-  const scale = interpolate(frame, [0, durationInFrames], [1.06, 1.16], { extrapolateRight: 'clamp' })
-  const panX = interpolate(frame, [0, durationInFrames], [0, 22 * dir], { extrapolateRight: 'clamp' })
+  const kbI = kenBurns ? (kenBurns.enabled === false ? 0 : (typeof kenBurns.intensity === 'number' ? kenBurns.intensity : 1)) : 1
+  const k = Math.max(0, kbI)
+  const scale = interpolate(frame, [0, durationInFrames], [1 + 0.06 * k, 1 + 0.16 * k], { extrapolateRight: 'clamp' })
+  const panX = interpolate(frame, [0, durationInFrames], [0, 22 * dir * k], { extrapolateRight: 'clamp' })
+  // Colour grade over the clip layer (reel.grade -> GRADE_PRESETS). Absent -> no filter.
+  const gradeFilter = grade && GRADE_PRESETS[grade] ? GRADE_PRESETS[grade] : undefined
 
   return (
     <AbsoluteFill style={{ opacity, backgroundColor: '#000' }}>
-      <AbsoluteFill style={{ transform: `scale(${scale}) translateX(${panX}px)` }}>
+      <AbsoluteFill style={{ transform: `scale(${scale}) translateX(${panX}px)`, filter: gradeFilter }}>
         {clipUrl ? (
           <OffthreadVideo src={clipUrl} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (

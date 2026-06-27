@@ -34,7 +34,17 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
     slide({ direction: 'from-bottom' }),
     wipe({ direction: 'from-right' }),
   ]
-  const presentation = presentations[seed % presentations.length]
+  // Per-preset transitions: reel.transition (slice-1 plumbed) picks the presentation; absent or
+  // unknown key -> the per-reel hash-select below. Keys match the 5 mood presets.
+  const TRANSITION_MAP = {
+    agency_dark: fade(),
+    studio_punch: slide({ direction: 'from-right' }),
+    editorial_soft: fade(),
+    hype_promo: wipe({ direction: 'from-right' }),
+    clean_product: slide({ direction: 'from-bottom' }),
+  }
+  const mapped = reel.transition ? TRANSITION_MAP[reel.transition] : undefined
+  const presentation = mapped || presentations[seed % presentations.length]
 
   // Build an alternating Sequence / Transition list for a smooth cut between beats.
   const children: React.ReactNode[] = []
@@ -61,6 +71,8 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
           captionStyle={captionStyle}
           captionConfig={reel.captionConfig}
           emphasis={b.emphasis}
+          kenBurns={reel.kenBurns}
+          grade={reel.grade}
         />
       </TransitionSeries.Sequence>
     )
