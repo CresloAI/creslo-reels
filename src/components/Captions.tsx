@@ -6,6 +6,15 @@ import { loadFont as loadJetBrainsMono } from '@remotion/google-fonts/JetBrainsM
 import { loadFont as loadFraunces } from '@remotion/google-fonts/Fraunces'
 import { loadFont as loadInter } from '@remotion/google-fonts/Inter'
 import { loadFont as loadPoppins } from '@remotion/google-fonts/Poppins'
+import { loadFont as loadDMSerifDisplay } from '@remotion/google-fonts/DMSerifDisplay'
+import { loadFont as loadDMSans } from '@remotion/google-fonts/DMSans'
+import { loadFont as loadBebasNeue } from '@remotion/google-fonts/BebasNeue'
+import { loadFont as loadArchivoBlack } from '@remotion/google-fonts/ArchivoBlack'
+import { loadFont as loadArchivo } from '@remotion/google-fonts/Archivo'
+import { loadFont as loadSpaceGrotesk } from '@remotion/google-fonts/SpaceGrotesk'
+import { loadFont as loadPlayfairDisplay } from '@remotion/google-fonts/PlayfairDisplay'
+import { loadFont as loadSourceSans3 } from '@remotion/google-fonts/SourceSans3'
+import { loadFont as loadSyne } from '@remotion/google-fonts/Syne'
 import { TRANSITION_FRAMES, type CaptionStyle, type StyleConfig } from '../lib/types'
 
 // Each style loads ONE font, limited to latin + only the weights used.
@@ -13,8 +22,22 @@ const montserrat = loadMontserrat().fontFamily
 const anton = loadAnton('normal', { weights: ['400'], subsets: ['latin'] }).fontFamily
 const jetbrains = loadJetBrainsMono('normal', { weights: ['400', '700'], subsets: ['latin'] }).fontFamily
 const fraunces = loadFraunces('normal', { weights: ['600'], subsets: ['latin'] }).fontFamily
-const inter = loadInter('normal', { weights: ['600', '800'], subsets: ['latin'] }).fontFamily
+const inter = loadInter('normal', { weights: ['400', '600', '800'], subsets: ['latin'] }).fontFamily
 const poppins = loadPoppins('normal', { weights: ['600', '700'], subsets: ['latin'] }).fontFamily
+
+// v2 slice 2 - extra families for the mood-preset font pairings (body/display) + the
+// slice-4 manual library. Loaded for their side-effect (registers the @font-face) and
+// referenced by family-name string via captionConfig; weight-trimmed to what is used.
+// MUST stay byte-identical to the frontend mirror src/remotion/ReelVideo.tsx.
+loadDMSans('normal', { weights: ['600'], subsets: ['latin'] })
+loadDMSerifDisplay('normal', { weights: ['400'], subsets: ['latin'] })
+loadBebasNeue('normal', { weights: ['400'], subsets: ['latin'] })
+loadArchivoBlack('normal', { weights: ['400'], subsets: ['latin'] })
+loadArchivo('normal', { weights: ['400', '700'], subsets: ['latin'] })
+loadSpaceGrotesk('normal', { weights: ['400', '700'], subsets: ['latin'] })
+loadPlayfairDisplay('normal', { weights: ['400', '700'], subsets: ['latin'] })
+loadSourceSans3('normal', { weights: ['400', '700'], subsets: ['latin'] })
+loadSyne('normal', { weights: ['400', '700'], subsets: ['latin'] })
 
 // ===== STYLE_CONFIG: one data map driving every per-style visual decision. =====
 // MUST stay byte-identical to the frontend mirror in src/remotion/ReelVideo.tsx
