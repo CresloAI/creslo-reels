@@ -1,5 +1,5 @@
 import React from 'react'
-import { useCurrentFrame, interpolate, spring, useVideoConfig } from 'remotion'
+import { useCurrentFrame, interpolate, spring, useVideoConfig, delayRender, continueRender } from 'remotion'
 import { loadFont as loadMontserrat } from '@remotion/google-fonts/Montserrat'
 import { loadFont as loadAnton } from '@remotion/google-fonts/Anton'
 import { loadFont as loadJetBrainsMono } from '@remotion/google-fonts/JetBrainsMono'
@@ -15,29 +15,72 @@ import { loadFont as loadSpaceGrotesk } from '@remotion/google-fonts/SpaceGrotes
 import { loadFont as loadPlayfairDisplay } from '@remotion/google-fonts/PlayfairDisplay'
 import { loadFont as loadSourceSans3 } from '@remotion/google-fonts/SourceSans3'
 import { loadFont as loadSyne } from '@remotion/google-fonts/Syne'
+import { loadFont as loadOswald } from '@remotion/google-fonts/Oswald'
+import { loadFont as loadAbrilFatface } from '@remotion/google-fonts/AbrilFatface'
+import { loadFont as loadCormorantGaramond } from '@remotion/google-fonts/CormorantGaramond'
+import { loadFont as loadUnbounded } from '@remotion/google-fonts/Unbounded'
+import { loadFont as loadRoboto } from '@remotion/google-fonts/Roboto'
+import { loadFont as loadOpenSans } from '@remotion/google-fonts/OpenSans'
+import { loadFont as loadLato } from '@remotion/google-fonts/Lato'
+import { loadFont as loadWorkSans } from '@remotion/google-fonts/WorkSans'
+import { loadFont as loadManrope } from '@remotion/google-fonts/Manrope'
+import { loadFont as loadIBMPlexSans } from '@remotion/google-fonts/IBMPlexSans'
+import { loadFont as loadOutfit } from '@remotion/google-fonts/Outfit'
+import { loadFont as loadSora } from '@remotion/google-fonts/Sora'
+import { loadFont as loadLora } from '@remotion/google-fonts/Lora'
 import { TRANSITION_FRAMES, type CaptionStyle, type StyleConfig } from '../lib/types'
 
-// Each style loads ONE font, limited to latin + only the weights used.
-const montserrat = loadMontserrat().fontFamily
-const anton = loadAnton('normal', { weights: ['400'], subsets: ['latin'] }).fontFamily
-const jetbrains = loadJetBrainsMono('normal', { weights: ['400', '700'], subsets: ['latin'] }).fontFamily
-const fraunces = loadFraunces('normal', { weights: ['600'], subsets: ['latin'] }).fontFamily
-const inter = loadInter('normal', { weights: ['400', '600', '800'], subsets: ['latin'] }).fontFamily
-const poppins = loadPoppins('normal', { weights: ['600', '700'], subsets: ['latin'] }).fontFamily
-
-// v2 slice 2 - extra families for the mood-preset font pairings (body/display) + the
-// slice-4 manual library. Loaded for their side-effect (registers the @font-face) and
-// referenced by family-name string via captionConfig; weight-trimmed to what is used.
+// ===== FONT_REGISTRY: the browsable font library (v2 slice 4). =====
 // MUST stay byte-identical to the frontend mirror src/remotion/ReelVideo.tsx.
-loadDMSans('normal', { weights: ['600'], subsets: ['latin'] })
-loadDMSerifDisplay('normal', { weights: ['400'], subsets: ['latin'] })
-loadBebasNeue('normal', { weights: ['400'], subsets: ['latin'] })
-loadArchivoBlack('normal', { weights: ['400'], subsets: ['latin'] })
-loadArchivo('normal', { weights: ['400', '700'], subsets: ['latin'] })
-loadSpaceGrotesk('normal', { weights: ['400', '700'], subsets: ['latin'] })
-loadPlayfairDisplay('normal', { weights: ['400', '700'], subsets: ['latin'] })
-loadSourceSans3('normal', { weights: ['400', '700'], subsets: ['latin'] })
-loadSyne('normal', { weights: ['400', '700'], subsets: ['latin'] })
+// LAZY: the render loads ONLY the reel's chosen cfg.font + cfg.fontSecondary via ensureFont()
+// below, so per-render font cost is flat no matter how big this list grows. Each load thunk
+// calls loadFont (which self-registers delayRender/continueRender) limited to latin + the
+// weights used. The `role` tag drives the editor's Display / Body pickers.
+export type FontEntry = { name: string; role: 'display' | 'body'; fontFamily: string; load: () => { waitUntilDone: () => Promise<unknown> } }
+export const FONT_REGISTRY: FontEntry[] = [
+  // --- Display ---
+  { name: 'Montserrat', role: 'display', fontFamily: 'Montserrat', load: () => loadMontserrat() },
+  { name: 'Anton', role: 'display', fontFamily: 'Anton', load: () => loadAnton('normal', { weights: ['400'], subsets: ['latin'] }) },
+  { name: 'Fraunces', role: 'display', fontFamily: 'Fraunces', load: () => loadFraunces('normal', { weights: ['400', '600', '700'], subsets: ['latin'] }) },
+  { name: 'Poppins', role: 'display', fontFamily: 'Poppins', load: () => loadPoppins('normal', { weights: ['400', '600', '700'], subsets: ['latin'] }) },
+  { name: 'DM Serif Display', role: 'display', fontFamily: 'DM Serif Display', load: () => loadDMSerifDisplay('normal', { weights: ['400'], subsets: ['latin'] }) },
+  { name: 'Bebas Neue', role: 'display', fontFamily: 'Bebas Neue', load: () => loadBebasNeue('normal', { weights: ['400'], subsets: ['latin'] }) },
+  { name: 'Archivo Black', role: 'display', fontFamily: 'Archivo Black', load: () => loadArchivoBlack('normal', { weights: ['400'], subsets: ['latin'] }) },
+  { name: 'Playfair Display', role: 'display', fontFamily: 'Playfair Display', load: () => loadPlayfairDisplay('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Space Grotesk', role: 'display', fontFamily: 'Space Grotesk', load: () => loadSpaceGrotesk('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Syne', role: 'display', fontFamily: 'Syne', load: () => loadSyne('normal', { weights: ['400', '700', '800'], subsets: ['latin'] }) },
+  { name: 'Oswald', role: 'display', fontFamily: 'Oswald', load: () => loadOswald('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Abril Fatface', role: 'display', fontFamily: 'Abril Fatface', load: () => loadAbrilFatface('normal', { weights: ['400'], subsets: ['latin'] }) },
+  { name: 'Cormorant Garamond', role: 'display', fontFamily: 'Cormorant Garamond', load: () => loadCormorantGaramond('normal', { weights: ['400', '600', '700'], subsets: ['latin'] }) },
+  { name: 'Unbounded', role: 'display', fontFamily: 'Unbounded', load: () => loadUnbounded('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  // --- Body ---
+  { name: 'Inter', role: 'body', fontFamily: 'Inter', load: () => loadInter('normal', { weights: ['400', '600', '800'], subsets: ['latin'] }) },
+  { name: 'DM Sans', role: 'body', fontFamily: 'DM Sans', load: () => loadDMSans('normal', { weights: ['400', '600', '700'], subsets: ['latin'] }) },
+  { name: 'Archivo', role: 'body', fontFamily: 'Archivo', load: () => loadArchivo('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Source Sans Three', role: 'body', fontFamily: 'Source Sans Three', load: () => loadSourceSans3('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'JetBrains Mono', role: 'body', fontFamily: 'JetBrains Mono', load: () => loadJetBrainsMono('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Roboto', role: 'body', fontFamily: 'Roboto', load: () => loadRoboto('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Open Sans', role: 'body', fontFamily: 'Open Sans', load: () => loadOpenSans('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Lato', role: 'body', fontFamily: 'Lato', load: () => loadLato('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Work Sans', role: 'body', fontFamily: 'Work Sans', load: () => loadWorkSans('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Manrope', role: 'body', fontFamily: 'Manrope', load: () => loadManrope('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'IBM Plex Sans', role: 'body', fontFamily: 'IBM Plex Sans', load: () => loadIBMPlexSans('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Outfit', role: 'body', fontFamily: 'Outfit', load: () => loadOutfit('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Sora', role: 'body', fontFamily: 'Sora', load: () => loadSora('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+  { name: 'Lora', role: 'body', fontFamily: 'Lora', load: () => loadLora('normal', { weights: ['400', '700'], subsets: ['latin'] }) },
+]
+
+// Load a family on demand, once per render process. loadFont self-registers a delayRender, so
+// the frame waits for the font; we also gate our own delayRender on waitUntilDone for safety.
+const requestedFonts = new Set<string>()
+function ensureFont(family?: string) {
+  if (!family || requestedFonts.has(family)) return
+  const entry = FONT_REGISTRY.find((f) => f.fontFamily === family)
+  if (!entry) return
+  requestedFonts.add(family)
+  const handle = delayRender(`font:${family}`)
+  entry.load().waitUntilDone().then(() => continueRender(handle), () => continueRender(handle))
+}
 
 // ===== STYLE_CONFIG: one data map driving every per-style visual decision. =====
 // MUST stay byte-identical to the frontend mirror in src/remotion/ReelVideo.tsx
@@ -45,14 +88,14 @@ loadSyne('normal', { weights: ['400', '700'], subsets: ['latin'] })
 // brandColor at render; a literal hex overrides it. inputProps.captionConfig can
 // override any field per style (B7) with no redeploy.
 const STYLE_CONFIG: Record<CaptionStyle, StyleConfig> = {
-  pop: { font: montserrat, textColor: '#FFFFFF', accent: 'brand', weight: 800, uppercase: true, sizeMul: 1, placement: 'center', reveal: 'wordSpring', activeFx: 'color', stroke: true },
-  karaoke: { font: montserrat, textColor: '#FFFFFF', accent: 'brand', weight: 800, uppercase: true, sizeMul: 1, placement: 'center', reveal: 'wordSpring', activeFx: 'color', stroke: true },
-  clean: { font: montserrat, textColor: '#FFFFFF', accent: 'brand', weight: 800, uppercase: true, sizeMul: 1, placement: 'center', reveal: 'wordSpring', activeFx: 'none', stroke: true },
-  bold_box: { font: anton, textColor: '#FFFFFF', accent: 'brand', weight: 400, uppercase: true, sizeMul: 1, placement: 'center', reveal: 'wordSpring', activeFx: 'box', stroke: true },
-  typewriter: { font: jetbrains, textColor: '#D8FFE9', accent: 'brand', weight: 700, uppercase: false, sizeMul: 1, placement: 'center', reveal: 'typewriter', activeFx: 'none', stroke: true },
-  lower_third: { font: fraunces, textColor: '#F5EFE0', accent: 'brand', weight: 600, uppercase: false, sizeMul: 1, placement: 'lowerThird', reveal: 'fade', activeFx: 'none', stroke: false, band: { fill: '#1A1A1F', accentEdge: 'brand' } },
-  big_subtitle: { font: inter, textColor: '#FFFFFF', accent: 'brand', weight: 700, uppercase: false, sizeMul: 1.18, placement: 'center', reveal: 'wordSpring', activeFx: 'none', stroke: true },
-  highlighter: { font: poppins, textColor: '#0F1115', accent: '#FFE14D', weight: 700, uppercase: false, sizeMul: 1, placement: 'center', reveal: 'wordSpring', activeFx: 'highlight', stroke: false },
+  pop: { font: 'Montserrat', textColor: '#FFFFFF', accent: 'brand', weight: 800, uppercase: true, sizeMul: 1, placement: 'center', reveal: 'wordSpring', activeFx: 'color', stroke: true },
+  karaoke: { font: 'Montserrat', textColor: '#FFFFFF', accent: 'brand', weight: 800, uppercase: true, sizeMul: 1, placement: 'center', reveal: 'wordSpring', activeFx: 'color', stroke: true },
+  clean: { font: 'Montserrat', textColor: '#FFFFFF', accent: 'brand', weight: 800, uppercase: true, sizeMul: 1, placement: 'center', reveal: 'wordSpring', activeFx: 'none', stroke: true },
+  bold_box: { font: 'Anton', textColor: '#FFFFFF', accent: 'brand', weight: 400, uppercase: true, sizeMul: 1, placement: 'center', reveal: 'wordSpring', activeFx: 'box', stroke: true },
+  typewriter: { font: 'JetBrains Mono', textColor: '#D8FFE9', accent: 'brand', weight: 700, uppercase: false, sizeMul: 1, placement: 'center', reveal: 'typewriter', activeFx: 'none', stroke: true },
+  lower_third: { font: 'Fraunces', textColor: '#F5EFE0', accent: 'brand', weight: 600, uppercase: false, sizeMul: 1, placement: 'lowerThird', reveal: 'fade', activeFx: 'none', stroke: false, band: { fill: '#1A1A1F', accentEdge: 'brand' } },
+  big_subtitle: { font: 'Inter', textColor: '#FFFFFF', accent: 'brand', weight: 700, uppercase: false, sizeMul: 1.18, placement: 'center', reveal: 'wordSpring', activeFx: 'none', stroke: true },
+  highlighter: { font: 'Poppins', textColor: '#0F1115', accent: '#FFE14D', weight: 700, uppercase: false, sizeMul: 1, placement: 'center', reveal: 'wordSpring', activeFx: 'highlight', stroke: false },
 }
 
 // White or near-black depending on a colour's luminance (Bold Box block text).
@@ -97,6 +140,9 @@ export const Captions: React.FC<{
 
   // B7 seam: per-style defaults, overridable by inputProps.captionConfig with no redeploy.
   const cfg: StyleConfig = { ...(STYLE_CONFIG[style] || STYLE_CONFIG.pop), ...(captionConfig?.[style] || {}) }
+  // Lazily load ONLY this reel's two chosen fonts (body + optional display) - flat render cost.
+  ensureFont(cfg.font)
+  ensureFont(cfg.fontSecondary)
   const dec = cfg.accent === 'brand' ? accent : cfg.accent
 
   // Finish the reveal/highlight BEFORE the cross-scene transition starts, then hold.
