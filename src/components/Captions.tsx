@@ -213,7 +213,11 @@ export const Captions: React.FC<{
     position: 'absolute', left: 0, right: 0,
     top: isHook ? '38%' : undefined, bottom: isHook ? undefined : '15%',
     display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignContent: 'center',
-    gap: `${fontSize * 0.12}px ${fontSize * 0.28}px`, padding: `0 ${width * 0.08}px`, textAlign: 'center',
+    // Column gap is generous (0.44em) so two ADJACENT highlighted words never visually merge.
+    // The active-word pop (scale 1.08, below) is a CSS transform that bulges each glyph box ~4%
+    // into this gap without reserving layout space; a tighter gap let same-colour neighbours
+    // (e.g. "fresh cut") run together and read as one word ("FRESHCUT"). Row gap stays tight.
+    gap: `${fontSize * 0.12}px ${fontSize * 0.44}px`, padding: `0 ${width * 0.08}px`, textAlign: 'center',
   }
   // ---- Centre fade: the whole caption fades in as a block (no per-word spring). Used by
   // Editorial Soft (reveal 'fade' on the centre path); keeps the body/display font pairing. ----
