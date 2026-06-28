@@ -165,6 +165,7 @@ export const Captions: React.FC<{
         padding: `0 ${width * 0.08}px`, textAlign: 'left',
         fontFamily: fam(cfg.font), fontWeight: cfg.weight, fontSize, lineHeight: 1.2, color: cfg.textColor,
         WebkitTextStroke: cfg.stroke ? `${Math.max(1, fontSize * 0.01)}px rgba(0,0,0,0.85)` : undefined,
+        paintOrder: 'stroke',
         textShadow: '0 4px 18px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.7)',
       }}>
         {shown}<span style={{ color: dec, opacity: cursorOn ? 1 : 0 }}>▍</span>
@@ -227,6 +228,7 @@ export const Captions: React.FC<{
             letterSpacing: isHook ? '-0.01em' : '0.005em', textTransform: cfg.uppercase ? 'uppercase' : 'none',
             color: cfg.textColor,
             WebkitTextStroke: cfg.stroke ? `${Math.max(1, fontSize * 0.012)}px rgba(0,0,0,0.85)` : undefined,
+            paintOrder: 'stroke',
             textShadow: '0 4px 18px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.7)',
           }}>{w}</span>
         ))}
@@ -248,6 +250,7 @@ export const Captions: React.FC<{
           color: cfg.textColor, opacity: enter,
           transform: `translateY(${translateY}px) scale(${grow * pop})`,
           WebkitTextStroke: cfg.stroke ? `${Math.max(1, fontSize * 0.012)}px rgba(0,0,0,0.85)` : undefined,
+          paintOrder: 'stroke',
           textShadow: '0 4px 18px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.7)',
           willChange: 'transform, opacity',
         }
