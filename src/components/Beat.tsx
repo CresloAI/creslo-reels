@@ -37,6 +37,9 @@ export const Beat: React.FC<{
   grade?: string | null
 }> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, kenBurns, grade }) => {
   const frame = useCurrentFrame()
+  // A failed clip fetch (e.g. a Pexels CDN 503) flips this so the beat degrades to the branded
+  // gradient instead of failing the whole reel.
+  const [clipFailed, setClipFailed] = React.useState(false)
 
   // Quick fade-in for a clean cut into each beat.
   const opacity = interpolate(frame, [0, 5], [0, 1], { extrapolateRight: 'clamp' })
@@ -53,8 +56,8 @@ export const Beat: React.FC<{
   return (
     <AbsoluteFill style={{ opacity, backgroundColor: '#000' }}>
       <AbsoluteFill style={{ transform: `scale(${scale}) translateX(${panX}px)`, filter: gradeFilter }}>
-        {clipUrl ? (
-          <OffthreadVideo src={clipUrl} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {clipUrl && !clipFailed ? (
+          <OffthreadVideo src={clipUrl} muted onError={() => setClipFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <AbsoluteFill
             style={{
