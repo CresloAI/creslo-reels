@@ -39,7 +39,7 @@ import { TRANSITION_FRAMES, type CaptionStyle, type StyleConfig } from '../lib/t
 export type FontEntry = { name: string; role: 'display' | 'body'; fontFamily: string; load: () => { waitUntilDone: () => Promise<unknown> } }
 export const FONT_REGISTRY: FontEntry[] = [
   // --- Display ---
-  { name: 'Montserrat', role: 'display', fontFamily: 'Montserrat', load: () => loadMontserrat() },
+  { name: 'Montserrat', role: 'display', fontFamily: 'Montserrat', load: () => loadMontserrat('normal', { weights: ['400', '800'], subsets: ['latin'] }) },
   { name: 'Anton', role: 'display', fontFamily: 'Anton', load: () => loadAnton('normal', { weights: ['400'], subsets: ['latin'] }) },
   { name: 'Fraunces', role: 'display', fontFamily: 'Fraunces', load: () => loadFraunces('normal', { weights: ['400', '600', '700'], subsets: ['latin'] }) },
   { name: 'Poppins', role: 'display', fontFamily: 'Poppins', load: () => loadPoppins('normal', { weights: ['400', '600', '700'], subsets: ['latin'] }) },
@@ -123,6 +123,10 @@ const CAPTION_STOPWORDS = new Set([
 ])
 const normWord = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, '')
 
+// Clean sans fallback so a font that fails to load degrades to Arial/sans, not a rough stroked
+// system serif. MUST stay byte-identical to the frontend mirror src/remotion/ReelVideo.tsx.
+const fam = (f: string) => `'${f}', 'Arial', sans-serif`
+
 export const Captions: React.FC<{
   text: string
   accent: string
@@ -159,7 +163,7 @@ export const Captions: React.FC<{
         position: 'absolute', left: 0, right: 0,
         top: isHook ? '40%' : undefined, bottom: isHook ? undefined : '16%',
         padding: `0 ${width * 0.08}px`, textAlign: 'left',
-        fontFamily: cfg.font, fontWeight: cfg.weight, fontSize, lineHeight: 1.2, color: cfg.textColor,
+        fontFamily: fam(cfg.font), fontWeight: cfg.weight, fontSize, lineHeight: 1.2, color: cfg.textColor,
         WebkitTextStroke: cfg.stroke ? `${Math.max(1, fontSize * 0.01)}px rgba(0,0,0,0.85)` : undefined,
         textShadow: '0 4px 18px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.7)',
       }}>
@@ -184,7 +188,7 @@ export const Captions: React.FC<{
           maxWidth: '88%', background: bandFill,
           borderLeft: `${Math.round(width * 0.012)}px solid ${edge}`, borderRadius: 8,
           padding: `${fontSize * 0.5}px ${fontSize * 0.7}px`,
-          fontFamily: cfg.font, fontWeight: cfg.weight, fontSize, lineHeight: 1.25, color: cfg.textColor, textAlign: 'left',
+          fontFamily: fam(cfg.font), fontWeight: cfg.weight, fontSize, lineHeight: 1.25, color: cfg.textColor, textAlign: 'left',
         }}>{full}</div>
       </div>
     )
@@ -218,7 +222,7 @@ export const Captions: React.FC<{
       <div style={{ ...wrap, opacity: appear }}>
         {words.map((w, i) => (
           <span key={i} style={{
-            display: 'inline-block', fontFamily: (cfg.fontSecondary && emph.has(i)) ? cfg.fontSecondary : cfg.font,
+            display: 'inline-block', fontFamily: fam((cfg.fontSecondary && emph.has(i)) ? cfg.fontSecondary : cfg.font),
             fontWeight: cfg.weight, fontSize, lineHeight: 1.04,
             letterSpacing: isHook ? '-0.01em' : '0.005em', textTransform: cfg.uppercase ? 'uppercase' : 'none',
             color: cfg.textColor,
@@ -239,7 +243,7 @@ export const Captions: React.FC<{
         const pop = isActive && (cfg.activeFx === 'color' || cfg.activeFx === 'highlight') ? 1.08 : 1
         // Font pairing: the emphasised (keyword) word uses the display font; the rest use the body font.
         const ws: React.CSSProperties = {
-          display: 'inline-block', fontFamily: (cfg.fontSecondary && emph.has(i)) ? cfg.fontSecondary : cfg.font, fontWeight: cfg.weight, fontSize, lineHeight: 1.04,
+          display: 'inline-block', fontFamily: fam((cfg.fontSecondary && emph.has(i)) ? cfg.fontSecondary : cfg.font), fontWeight: cfg.weight, fontSize, lineHeight: 1.04,
           letterSpacing: isHook ? '-0.01em' : '0.005em', textTransform: cfg.uppercase ? 'uppercase' : 'none',
           color: cfg.textColor, opacity: enter,
           transform: `translateY(${translateY}px) scale(${grow * pop})`,
