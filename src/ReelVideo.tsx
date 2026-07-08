@@ -72,6 +72,7 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
           emphasis={b.emphasis}
           zone={b.zone}
           beatType={b.beatType}
+          brandName={reel.brandName}
           kenBurns={reel.kenBurns}
           grade={reel.grade}
         />

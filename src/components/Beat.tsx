@@ -43,10 +43,11 @@ export const Beat: React.FC<{
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   emphasis?: number[]
   zone?: 'top' | 'middle' | 'bottom'
-  beatType?: 'clip' | 'text'
+  beatType?: 'clip' | 'text' | 'cta'
+  brandName?: string
   kenBurns?: { enabled?: boolean; intensity?: number } | null
   grade?: string | null
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, kenBurns, grade }) => {
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, brandName, kenBurns, grade }) => {
   const frame = useCurrentFrame()
   // A failed clip fetch (e.g. a Pexels CDN 503) flips this so the beat degrades to the branded
   // gradient instead of failing the whole reel.
@@ -81,6 +82,24 @@ export const Beat: React.FC<{
     )
   }
 
+
+  // Branded CTA end-card (Studio v2 slice 3): the reel's closer. Deep brand field,
+  // small-caps brand eyebrow, accent rule, then the call-to-action rendered big via
+  // Captions (so it keeps the reel's chosen typography). No footage, no zones.
+  if (beatType === 'cta') {
+    const eyebrow = interpolate(frame, [0, 8], [0, 1], { extrapolateRight: 'clamp' })
+    const rule = interpolate(frame, [4, 14], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+    return (
+      <AbsoluteFill style={{ opacity }}>
+        <AbsoluteFill style={{ background: `radial-gradient(120% 90% at 50% 20%, ${shade(accent, -0.35)} 0%, ${shade(accent, -0.55)} 60%, ${shade(accent, -0.7)} 100%)` }} />
+        <div style={{ position: 'absolute', top: '26%', left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+          {brandName ? <div style={{ fontFamily: "'Arial', sans-serif", fontWeight: 800, fontSize: 30, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#FFFFFF', opacity: eyebrow * 0.92 }}>{brandName}</div> : null}
+          <div style={{ width: 130 * rule, height: 5, borderRadius: 4, background: accent, opacity: rule }} />
+        </div>
+        <Captions text={text} accent={accent} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+      </AbsoluteFill>
+    )
+  }
   return (
     <AbsoluteFill style={{ opacity, backgroundColor: '#000' }}>
       <AbsoluteFill style={{ transform: `scale(${scale}) translateX(${panX}px)`, filter: gradeFilter }}>

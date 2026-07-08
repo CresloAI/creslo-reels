@@ -280,7 +280,26 @@ export const Captions: React.FC<{
           ws.borderRadius = `${fontSize * 0.1}px`
           ws.WebkitTextStroke = undefined
         }
-        return <span key={i} style={ws}>{w}</span>
+        // Word effects (Studio v2 slice 2): once the emphasised word has landed, an
+        // accent bar sweeps across (strike) or under (underline) it - the promo's
+        // hand-edited energy, systemised. Inactive words are untouched.
+        const wantsSweep = isActive && (cfg.activeFx === 'strike' || cfg.activeFx === 'underline')
+        if (wantsSweep) ws.position = 'relative'
+        const sweep = wantsSweep ? interpolate(frame - i * 2 - 10, [0, 8], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) : 0
+        return (
+          <span key={i} style={ws}>
+            {w}
+            {wantsSweep && (
+              <span style={{
+                position: 'absolute', left: '-4%', width: `${sweep * 108}%`,
+                height: Math.max(4, fontSize * 0.07), background: dec, borderRadius: 4,
+                top: cfg.activeFx === 'strike' ? '50%' : undefined,
+                bottom: cfg.activeFx === 'underline' ? `-${Math.round(fontSize * 0.08)}px` : undefined,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+              }} />
+            )}
+          </span>
+        )
       })}
     </div>
   )

@@ -13,8 +13,8 @@ export type ReelScene = {
   // Keyword-emphasis: indices into on_screen.split(/\s+/).filter(Boolean) - the word(s) to emphasise.
   emphasis?: number[]
   caption_zone?: CaptionZone
-  // Kinetic text beat (Studio v2 slice 1): no footage - the words ARE the scene.
-  beat_type?: 'clip' | 'text'
+  // Kinetic text beat (slice 1) / branded CTA end-card (slice 3): no footage needed.
+  beat_type?: 'clip' | 'text' | 'cta'
 }
 
 // Single source of truth for caption-style keys. The union AND the render-side
@@ -36,7 +36,8 @@ export type StyleConfig = {
   sizeMul: number
   placement: 'center' | 'lowerThird'
   reveal: 'wordSpring' | 'typewriter' | 'fade'
-  activeFx: 'none' | 'color' | 'box' | 'highlight'
+  // strike/underline (Studio v2 slice 2): animated accent sweep on the emphasised word.
+  activeFx: 'none' | 'color' | 'box' | 'highlight' | 'strike' | 'underline'
   stroke: boolean
   band?: { fill: string; accentEdge: string }
 }
@@ -49,6 +50,8 @@ export type ReelData = {
   audio?: string | null
   // Look & feel
   brandColor?: string
+  // Brand display name for the CTA end-card (slice 3).
+  brandName?: string
   captionStyle?: CaptionStyle
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   hookSeconds?: number
@@ -77,7 +80,7 @@ export type Beat = {
   seconds: number
   emphasis?: number[]
   zone?: CaptionZone
-  beatType?: 'clip' | 'text'
+  beatType?: 'clip' | 'text' | 'cta'
 }
 
 export function buildBeats(reel: ReelData): Beat[] {
@@ -105,7 +108,7 @@ export function buildBeats(reel: ReelData): Beat[] {
       seconds: Math.max(1.5, Math.min(10, Number(s.seconds) || 3)),
       emphasis: s.emphasis || [],
       zone: s.caption_zone,
-      beatType: s.beat_type === 'text' ? 'text' : 'clip',
+      beatType: s.beat_type === 'text' ? 'text' : s.beat_type === 'cta' ? 'cta' : 'clip',
     })
   }
   if (!beats.length) beats.push({ text: '', isHook: true, clipUrl: null, seconds: 3, emphasis: [] })
