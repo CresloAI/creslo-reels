@@ -1,5 +1,5 @@
 import React from 'react'
-import { AbsoluteFill, OffthreadVideo, Img, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
+import { AbsoluteFill, OffthreadVideo, Img, useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion'
 import { Captions } from './Captions'
 import type { CaptionStyle, StyleConfig } from '../lib/types'
 
@@ -11,6 +11,14 @@ function shade(hex: string, amt: number) {
   const f = (v: number) => Math.max(0, Math.min(255, Math.round(v + 255 * amt)))
   r = f(r); g = f(g); b = f(b)
   return `rgb(${r},${g},${b})`
+}
+
+// Accent colour with alpha (mirror of the frontend's helper).
+function hexA(hex: string, a: number) {
+  const h = (hex || '#E8743B').replace('#', '')
+  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  return `rgba(${r},${g},${b},${a})`
 }
 
 // Readable text colour for a solid brand-colour field (mirror of the frontend's helper).
@@ -46,10 +54,12 @@ export const Beat: React.FC<{
   beatType?: 'clip' | 'text' | 'cta' | 'mockup'
   poster?: string | null
   brandName?: string
+  brandLogo?: string | null
   kenBurns?: { enabled?: boolean; intensity?: number } | null
   grade?: string | null
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, poster, brandName, kenBurns, grade }) => {
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, poster, brandName, brandLogo, kenBurns, grade }) => {
   const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
   // A failed clip fetch (e.g. a Pexels CDN 503) flips this so the beat degrades to the branded
   // gradient instead of failing the whole reel.
   const [clipFailed, setClipFailed] = React.useState(false)
@@ -78,7 +88,10 @@ export const Beat: React.FC<{
     return (
       <AbsoluteFill style={{ opacity }}>
         <AbsoluteFill style={{ background: `radial-gradient(130% 100% at ${50 + Math.sin(drift * 0.08) * 14}% ${30 + Math.cos(drift * 0.06) * 10}%, ${bgA} 0%, ${bgB} 62%, ${shade(accent, dark ? -0.62 : -0.3)} 100%)` }} />
-        <Captions text={text} accent={dark ? '#FFFFFF' : idealText(accent)} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+        {/* slow push-in keeps the type alive for the whole beat */}
+        <div style={{ position: 'absolute', inset: 0, transform: `scale(${1 + (frame / Math.max(1, durationInFrames)) * 0.05})` }}>
+          <Captions text={text} accent={dark ? '#FFFFFF' : idealText(accent)} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+        </div>
       </AbsoluteFill>
     )
   }
@@ -110,20 +123,35 @@ export const Beat: React.FC<{
       </AbsoluteFill>
     )
   }
-  // Branded CTA end-card (Studio v2 slice 3): the reel's closer. Deep brand field,
-  // small-caps brand eyebrow, accent rule, then the call-to-action rendered big via
-  // Captions (so it keeps the reel's chosen typography). No footage, no zones.
+  // Branded CTA end-card (Studio v2 slice 3, premium pass): the reel's closer.
+  // Brand LOGO (when the brand has one) springs in above a spaced-caps name and a
+  // shimmering accent rule; the CTA line renders big via Captions (keeping the reel's
+  // typography) over a breathing glow so the card never sits still. No footage, no zones.
   if (beatType === 'cta') {
-    const eyebrow = interpolate(frame, [0, 8], [0, 1], { extrapolateRight: 'clamp' })
-    const rule = interpolate(frame, [4, 14], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+    const logoS = spring({ frame: frame - 2, fps, config: { damping: 12, mass: 0.6, stiffness: 160 } })
+    const eyebrow = interpolate(frame, [4, 12], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+    const rule = interpolate(frame, [8, 18], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+    const breathe = 1 + Math.sin(frame * 0.09) * 0.012
+    const glow = 0.45 + Math.sin(frame * 0.13) * 0.18
     return (
       <AbsoluteFill style={{ opacity }}>
         <AbsoluteFill style={{ background: `radial-gradient(120% 90% at 50% 20%, ${shade(accent, -0.35)} 0%, ${shade(accent, -0.55)} 60%, ${shade(accent, -0.7)} 100%)` }} />
-        <div style={{ position: 'absolute', top: '26%', left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
-          {brandName ? <div style={{ fontFamily: "'Arial', sans-serif", fontWeight: 800, fontSize: 30, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#FFFFFF', opacity: eyebrow * 0.92 }}>{brandName}</div> : null}
-          <div style={{ width: 130 * rule, height: 5, borderRadius: 4, background: accent, opacity: rule }} />
+        {/* breathing accent glow behind the CTA line */}
+        <div style={{ position: 'absolute', left: '50%', top: '50%', width: 900, height: 900, transform: 'translate(-50%, -50%)', background: `radial-gradient(circle, ${hexA(accent, 0.32)} 0%, transparent 62%)`, opacity: glow }} />
+        <div style={{ position: 'absolute', top: '20%', left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+          {brandLogo ? (
+            <Img src={brandLogo} style={{
+              width: 128, height: 128, borderRadius: 30, objectFit: 'cover',
+              opacity: logoS, transform: `scale(${0.7 + 0.3 * logoS})`,
+              boxShadow: '0 30px 60px -28px rgba(0,0,0,.6)',
+            }} />
+          ) : null}
+          {brandName ? <div style={{ fontFamily: "'Arial', sans-serif", fontWeight: 800, fontSize: 27, letterSpacing: '0.34em', textTransform: 'uppercase', color: '#FFFFFF', opacity: eyebrow * 0.92, paddingLeft: '0.34em' }}>{brandName}</div> : null}
+          <div style={{ width: 130 * rule, height: 5, borderRadius: 4, background: accent, opacity: rule, boxShadow: `0 0 ${12 + glow * 14}px ${hexA(accent, 0.8)}` }} />
         </div>
-        <Captions text={text} accent={accent} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+        <div style={{ position: 'absolute', inset: 0, transform: `scale(${breathe})` }}>
+          <Captions text={text} accent={accent} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+        </div>
       </AbsoluteFill>
     )
   }

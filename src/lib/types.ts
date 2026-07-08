@@ -51,8 +51,9 @@ export type ReelData = {
   audio?: string | null
   // Look & feel
   brandColor?: string
-  // Brand display name for the CTA end-card (slice 3).
+  // Brand display name + logo for the CTA end-card (slice 3).
   brandName?: string
+  brandLogo?: string | null
   // Audio plumbing (slice 5): background music + optional narration, mixed at render.
   music?: { url?: string; volume?: number } | null
   voiceoverUrl?: string | null
