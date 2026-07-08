@@ -13,6 +13,8 @@ export type ReelScene = {
   // Keyword-emphasis: indices into on_screen.split(/\s+/).filter(Boolean) - the word(s) to emphasise.
   emphasis?: number[]
   caption_zone?: CaptionZone
+  // Kinetic text beat (Studio v2 slice 1): no footage - the words ARE the scene.
+  beat_type?: 'clip' | 'text'
 }
 
 // Single source of truth for caption-style keys. The union AND the render-side
@@ -75,6 +77,7 @@ export type Beat = {
   seconds: number
   emphasis?: number[]
   zone?: CaptionZone
+  beatType?: 'clip' | 'text'
 }
 
 export function buildBeats(reel: ReelData): Beat[] {
@@ -102,6 +105,7 @@ export function buildBeats(reel: ReelData): Beat[] {
       seconds: Math.max(1.5, Math.min(10, Number(s.seconds) || 3)),
       emphasis: s.emphasis || [],
       zone: s.caption_zone,
+      beatType: s.beat_type === 'text' ? 'text' : 'clip',
     })
   }
   if (!beats.length) beats.push({ text: '', isHook: true, clipUrl: null, seconds: 3, emphasis: [] })

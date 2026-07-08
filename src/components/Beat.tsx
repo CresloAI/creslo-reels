@@ -13,6 +13,15 @@ function shade(hex: string, amt: number) {
   return `rgb(${r},${g},${b})`
 }
 
+// Readable text colour for a solid brand-colour field (mirror of the frontend's helper).
+function idealText(hex: string) {
+  const h = (hex || '#E8743B').replace('#', '')
+  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum > 0.6 ? '#0F1115' : '#ffffff'
+}
+
 // CSS colour grades applied over the clip layer (driven by reel.grade). Absent -> no filter.
 // MUST stay byte-identical to the frontend mirror src/remotion/ReelVideo.tsx.
 const GRADE_PRESETS: Record<string, string> = {
@@ -34,9 +43,10 @@ export const Beat: React.FC<{
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   emphasis?: number[]
   zone?: 'top' | 'middle' | 'bottom'
+  beatType?: 'clip' | 'text'
   kenBurns?: { enabled?: boolean; intensity?: number } | null
   grade?: string | null
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, kenBurns, grade }) => {
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, kenBurns, grade }) => {
   const frame = useCurrentFrame()
   // A failed clip fetch (e.g. a Pexels CDN 503) flips this so the beat degrades to the branded
   // gradient instead of failing the whole reel.
@@ -53,6 +63,23 @@ export const Beat: React.FC<{
   const panX = interpolate(frame, [0, durationInFrames], [0, 22 * dir * k], { extrapolateRight: 'clamp' })
   // Colour grade over the clip layer (reel.grade -> GRADE_PRESETS). Absent -> no filter.
   const gradeFilter = grade && GRADE_PRESETS[grade] ? GRADE_PRESETS[grade] : undefined
+
+  // Kinetic text beat (Studio v2 slice 1): the words ARE the scene. A slowly drifting
+  // brand-colour field (alternating polarity per beat for rhythm) with the caption
+  // rendered at hook scale. Footage and caption zones don't apply here.
+  // MUST stay byte-identical to the frontend mirror src/remotion/ReelVideo.tsx.
+  if (beatType === 'text') {
+    const drift = frame * 0.15
+    const dark = index % 2 === 1
+    const bgA = dark ? shade(accent, -0.5) : shade(accent, 0.1)
+    const bgB = dark ? shade(accent, -0.25) : shade(accent, -0.18)
+    return (
+      <AbsoluteFill style={{ opacity }}>
+        <AbsoluteFill style={{ background: `radial-gradient(130% 100% at ${50 + Math.sin(drift * 0.08) * 14}% ${30 + Math.cos(drift * 0.06) * 10}%, ${bgA} 0%, ${bgB} 62%, ${shade(accent, dark ? -0.62 : -0.3)} 100%)` }} />
+        <Captions text={text} accent={dark ? '#FFFFFF' : idealText(accent)} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+      </AbsoluteFill>
+    )
+  }
 
   return (
     <AbsoluteFill style={{ opacity, backgroundColor: '#000' }}>
