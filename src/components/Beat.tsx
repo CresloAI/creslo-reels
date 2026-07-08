@@ -33,9 +33,10 @@ export const Beat: React.FC<{
   captionStyle?: CaptionStyle
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   emphasis?: number[]
+  zone?: 'top' | 'middle' | 'bottom'
   kenBurns?: { enabled?: boolean; intensity?: number } | null
   grade?: string | null
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, kenBurns, grade }) => {
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, kenBurns, grade }) => {
   const frame = useCurrentFrame()
   // A failed clip fetch (e.g. a Pexels CDN 503) flips this so the beat degrades to the branded
   // gradient instead of failing the whole reel.
@@ -76,7 +77,7 @@ export const Beat: React.FC<{
         }}
       />
 
-      <Captions text={text} accent={accent} isHook={isHook} style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+      <Captions text={text} accent={accent} isHook={isHook} style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} zone={zone} />
     </AbsoluteFill>
   )
 }

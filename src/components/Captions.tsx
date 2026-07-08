@@ -135,7 +135,8 @@ export const Captions: React.FC<{
   durationInFrames: number
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   emphasis?: number[]
-}> = ({ text, accent, isHook, style = 'pop', durationInFrames, captionConfig, emphasis }) => {
+  zone?: 'top' | 'middle' | 'bottom'
+}> = ({ text, accent, isHook, style = 'pop', durationInFrames, captionConfig, emphasis, zone }) => {
   const frame = useCurrentFrame()
   const { fps, width } = useVideoConfig()
   const full = String(text || '').trim()
@@ -161,7 +162,9 @@ export const Captions: React.FC<{
     return (
       <div style={{
         position: 'absolute', left: 0, right: 0,
-        top: isHook ? '40%' : undefined, bottom: isHook ? undefined : '16%',
+        // Subject-aware zone (least-important band) overrides the legacy anchors.
+        top: zone === 'top' ? '12%' : zone === 'middle' ? '40%' : (!zone && isHook) ? '40%' : undefined,
+        bottom: zone === 'bottom' ? '16%' : (!zone && !isHook) ? '16%' : undefined,
         padding: `0 ${width * 0.08}px`, textAlign: 'left',
         fontFamily: fam(cfg.font), fontWeight: cfg.weight, fontSize, lineHeight: 1.2, color: cfg.textColor,
         WebkitTextStroke: cfg.stroke ? `${Math.max(1, fontSize * 0.01)}px rgba(0,0,0,0.85)` : undefined,
@@ -181,7 +184,10 @@ export const Captions: React.FC<{
     const edge = cfg.band ? (cfg.band.accentEdge === 'brand' ? accent : cfg.band.accentEdge) : dec
     return (
       <div style={{
-        position: 'absolute', left: 0, right: 0, bottom: '14%',
+        position: 'absolute', left: 0, right: 0,
+        // Subject-aware zone: the band flips to wherever the clip's subject ISN'T.
+        top: zone === 'top' ? '12%' : zone === 'middle' ? '42%' : undefined,
+        bottom: (zone === 'top' || zone === 'middle') ? undefined : '14%',
         display: 'flex', justifyContent: 'center', padding: `0 ${width * 0.06}px`,
         opacity: appear, transform: `translateY(${interpolate(appear, [0, 1], [16, 0])}px)`,
       }}>
@@ -211,7 +217,9 @@ export const Captions: React.FC<{
   }
   const wrap: React.CSSProperties = {
     position: 'absolute', left: 0, right: 0,
-    top: isHook ? '38%' : undefined, bottom: isHook ? undefined : '15%',
+    // Subject-aware zone (least-important band) overrides the legacy anchors.
+    top: zone === 'top' ? '10%' : zone === 'middle' ? '38%' : (!zone && isHook) ? '38%' : undefined,
+    bottom: zone === 'bottom' ? '15%' : (!zone && !isHook) ? '15%' : undefined,
     display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignContent: 'center',
     // Column gap is generous (0.44em) so two ADJACENT highlighted words never visually merge.
     // The active-word pop (scale 1.08, below) is a CSS transform that bulges each glyph box ~4%

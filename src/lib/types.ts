@@ -1,4 +1,8 @@
 // Shape of a reel — matches what the Creslo backend produces.
+// Subject-aware caption placement: the vertical band with the LEAST important
+// content in the clip (backend vision pass at clip-match time). Captions anchor
+// here so they never cover the clip's main subject. Absent -> legacy anchors.
+export type CaptionZone = 'top' | 'middle' | 'bottom'
 export type ReelScene = {
   on_screen?: string
   voiceover?: string
@@ -8,6 +12,7 @@ export type ReelScene = {
   seconds?: number
   // Keyword-emphasis: indices into on_screen.split(/\s+/).filter(Boolean) - the word(s) to emphasise.
   emphasis?: number[]
+  caption_zone?: CaptionZone
 }
 
 // Single source of truth for caption-style keys. The union AND the render-side
@@ -69,6 +74,7 @@ export type Beat = {
   clipUrl?: string | null
   seconds: number
   emphasis?: number[]
+  zone?: CaptionZone
 }
 
 export function buildBeats(reel: ReelData): Beat[] {
@@ -85,6 +91,7 @@ export function buildBeats(reel: ReelData): Beat[] {
       clipUrl: (hook && hook.clip_url) ? hook.clip_url : (scenes[0] ? scenes[0].clip_url : null),
       seconds: Math.max(1.5, Math.min(5, Number(reel.hookSeconds) || 2.5)),
       emphasis: (hook && hook.emphasis) || [],
+      zone: (hook && (hook as { caption_zone?: CaptionZone }).caption_zone) || (scenes[0] ? scenes[0].caption_zone : undefined),
     })
   }
   for (const s of scenes) {
@@ -94,6 +101,7 @@ export function buildBeats(reel: ReelData): Beat[] {
       clipUrl: s.clip_url || null,
       seconds: Math.max(1.5, Math.min(10, Number(s.seconds) || 3)),
       emphasis: s.emphasis || [],
+      zone: s.caption_zone,
     })
   }
   if (!beats.length) beats.push({ text: '', isHook: true, clipUrl: null, seconds: 3, emphasis: [] })
