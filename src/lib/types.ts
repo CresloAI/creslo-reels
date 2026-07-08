@@ -14,7 +14,8 @@ export type ReelScene = {
   emphasis?: number[]
   caption_zone?: CaptionZone
   // Kinetic text beat (slice 1) / branded CTA end-card (slice 3): no footage needed.
-  beat_type?: 'clip' | 'text' | 'cta'
+  // 'mockup' (slice 4): the scene's poster image inside a phone frame (their website/menu).
+  beat_type?: 'clip' | 'text' | 'cta' | 'mockup'
 }
 
 // Single source of truth for caption-style keys. The union AND the render-side
@@ -52,6 +53,9 @@ export type ReelData = {
   brandColor?: string
   // Brand display name for the CTA end-card (slice 3).
   brandName?: string
+  // Audio plumbing (slice 5): background music + optional narration, mixed at render.
+  music?: { url?: string; volume?: number } | null
+  voiceoverUrl?: string | null
   captionStyle?: CaptionStyle
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   hookSeconds?: number
@@ -80,7 +84,8 @@ export type Beat = {
   seconds: number
   emphasis?: number[]
   zone?: CaptionZone
-  beatType?: 'clip' | 'text' | 'cta'
+  beatType?: 'clip' | 'text' | 'cta' | 'mockup'
+  poster?: string | null
 }
 
 export function buildBeats(reel: ReelData): Beat[] {
@@ -108,7 +113,8 @@ export function buildBeats(reel: ReelData): Beat[] {
       seconds: Math.max(1.5, Math.min(10, Number(s.seconds) || 3)),
       emphasis: s.emphasis || [],
       zone: s.caption_zone,
-      beatType: s.beat_type === 'text' ? 'text' : s.beat_type === 'cta' ? 'cta' : 'clip',
+      beatType: (s.beat_type === 'text' || s.beat_type === 'cta' || s.beat_type === 'mockup') ? s.beat_type : 'clip',
+      poster: s.poster || null,
     })
   }
   if (!beats.length) beats.push({ text: '', isHook: true, clipUrl: null, seconds: 3, emphasis: [] })

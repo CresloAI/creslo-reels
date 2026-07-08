@@ -1,5 +1,5 @@
 import React from 'react'
-import { AbsoluteFill, OffthreadVideo, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
+import { AbsoluteFill, OffthreadVideo, Img, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
 import { Captions } from './Captions'
 import type { CaptionStyle, StyleConfig } from '../lib/types'
 
@@ -43,11 +43,12 @@ export const Beat: React.FC<{
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   emphasis?: number[]
   zone?: 'top' | 'middle' | 'bottom'
-  beatType?: 'clip' | 'text' | 'cta'
+  beatType?: 'clip' | 'text' | 'cta' | 'mockup'
+  poster?: string | null
   brandName?: string
   kenBurns?: { enabled?: boolean; intensity?: number } | null
   grade?: string | null
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, brandName, kenBurns, grade }) => {
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, poster, brandName, kenBurns, grade }) => {
   const frame = useCurrentFrame()
   // A failed clip fetch (e.g. a Pexels CDN 503) flips this so the beat degrades to the branded
   // gradient instead of failing the whole reel.
@@ -83,6 +84,32 @@ export const Beat: React.FC<{
   }
 
 
+
+  // Website/mockup beat (Studio v2 slice 4): the scene's poster image (their website,
+  // menu, booking page - any tall screenshot) inside a phone frame, slowly scrolling.
+  if (beatType === 'mockup') {
+    const scroll = interpolate(frame, [0, durationInFrames], [0, 100], { extrapolateRight: 'clamp' })
+    const rise = interpolate(frame, [0, 12], [60, 0], { extrapolateRight: 'clamp' })
+    return (
+      <AbsoluteFill style={{ opacity }}>
+        <AbsoluteFill style={{ background: `radial-gradient(120% 90% at 50% 15%, ${shade(accent, -0.3)} 0%, ${shade(accent, -0.52)} 60%, ${shade(accent, -0.68)} 100%)` }} />
+        <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '58%', aspectRatio: '9 / 18.5', position: 'relative', transform: `translateY(${rise}px)` }}>
+            <div style={{ position: 'absolute', inset: 0, borderRadius: 54, background: '#141210', boxShadow: '0 50px 100px -40px rgba(0,0,0,.6), inset 0 0 0 3px rgba(255,255,255,.08)' }} />
+            <div style={{ position: 'absolute', inset: 10, borderRadius: 46, overflow: 'hidden', background: '#fff' }}>
+              {poster ? (
+                <Img src={poster} style={{ width: '100%', height: 'auto', minHeight: '100%', objectFit: 'cover', objectPosition: `50% ${scroll}%` }} />
+              ) : (
+                <AbsoluteFill style={{ background: `linear-gradient(160deg, ${shade(accent, 0.25)}, ${shade(accent, -0.1)})` }} />
+              )}
+            </div>
+            <div style={{ position: 'absolute', top: 18, left: '50%', transform: 'translateX(-50%)', width: '26%', height: 22, borderRadius: 100, background: '#141210' }} />
+          </div>
+        </AbsoluteFill>
+        <Captions text={text} accent={accent} isHook={false} style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+      </AbsoluteFill>
+    )
+  }
   // Branded CTA end-card (Studio v2 slice 3): the reel's closer. Deep brand field,
   // small-caps brand eyebrow, accent rule, then the call-to-action rendered big via
   // Captions (so it keeps the reel's chosen typography). No footage, no zones.

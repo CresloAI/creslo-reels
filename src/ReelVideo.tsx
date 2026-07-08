@@ -1,5 +1,5 @@
 import React from 'react'
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
+import { AbsoluteFill, Audio, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
 import { TransitionSeries, linearTiming } from '@remotion/transitions'
 import { fade } from '@remotion/transitions/fade'
 import { slide } from '@remotion/transitions/slide'
@@ -72,6 +72,7 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
           emphasis={b.emphasis}
           zone={b.zone}
           beatType={b.beatType}
+          poster={b.poster}
           brandName={reel.brandName}
           kenBurns={reel.kenBurns}
           grade={reel.grade}
@@ -85,6 +86,11 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
       <TransitionSeries>{children}</TransitionSeries>
+      {/* Audio (Studio v2 slice 5): background music bed + optional narration track,
+          mixed into the render. Music ducks to 25% by default so voiceover reads. */}
+      {reel.music && reel.music.url ? <Audio src={reel.music.url} volume={typeof reel.music.volume === 'number' ? reel.music.volume : 0.25} /> : null}
+      {reel.voiceoverUrl ? <Audio src={reel.voiceoverUrl} /> : null}
+
       {/* trendy progress bar */}
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 8, background: 'rgba(255,255,255,0.18)' }}>
         <div style={{ width: `${progress}%`, height: '100%', background: accent }} />
