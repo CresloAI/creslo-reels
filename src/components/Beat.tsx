@@ -1,7 +1,12 @@
 import React from 'react'
 import { AbsoluteFill, OffthreadVideo, Img, useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion'
+import { loadFont as loadWordmarkSerif } from '@remotion/google-fonts/DMSerifDisplay'
 import { Captions } from './Captions'
 import type { CaptionStyle, StyleConfig } from '../lib/types'
+
+// The wordmark serif — the same face as Creslo's own "Creslo." brand mark. Every
+// brand's name renders in this editorial style on the CTA end-card.
+const WORDMARK_FONT = loadWordmarkSerif('normal', { weights: ['400'], subsets: ['latin'] }).fontFamily
 
 function shade(hex: string, amt: number) {
   // lighten/darken a hex colour by amt (-1..1)
@@ -48,9 +53,14 @@ const GRADE_PRESETS: Record<string, string> = {
 // MUST stay byte-identical in both composition mirrors.
 const GRAIN_URI = "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/></filter><rect width=%22160%22 height=%22160%22 filter=%22url(%23n)%22 opacity=%220.5%22/></svg>')"
 const BrandField: React.FC<{ accent: string; frame: number; dark?: boolean }> = ({ accent, frame, dark }) => {
-  const base = dark ? shade(accent, -0.55) : shade(accent, -0.15)
-  const deep = dark ? shade(accent, -0.72) : shade(accent, -0.4)
-  const lift = dark ? shade(accent, -0.3) : shade(accent, 0.12)
+  // v2 (agency pass): a rich, colour-SATURATED stage — never crushed toward black.
+  // 'dark' now means "deep jewel tone of the brand colour", not "murky". The brand
+  // colour is the star in both polarities; light comes from a gradient mesh, a slow
+  // cinematic sweep pass and bokeh depth, so the field feels lit, not dimmed.
+  const base = dark ? shade(accent, -0.32) : shade(accent, -0.06)
+  const deep = dark ? shade(accent, -0.5) : shade(accent, -0.24)
+  const lift = dark ? shade(accent, -0.1) : shade(accent, 0.24)
+  const hot = shade(accent, 0.42)
   // Deterministic particle field (no randomness - identical on every render).
   const parts = Array.from({ length: 16 }, (_, i) => {
     const px = ((i * 61) % 97) / 97 * 100
@@ -60,41 +70,67 @@ const BrandField: React.FC<{ accent: string; frame: number; dark?: boolean }> = 
     const size = 3 + (i % 4) * 2.5
     return { px, py, tw, size }
   })
+  // Large soft bokeh discs drifting through depth (deterministic).
+  const bokeh = [
+    { x: 14 + Math.sin(frame * 0.008) * 6, y: 26 + Math.cos(frame * 0.01) * 5, s: 150, o: 0.16 },
+    { x: 80 + Math.cos(frame * 0.009) * 5, y: 14 + Math.sin(frame * 0.012) * 6, s: 100, o: 0.13 },
+    { x: 68 + Math.sin(frame * 0.007) * 7, y: 74 + Math.cos(frame * 0.011) * 4, s: 190, o: 0.1 },
+  ]
+  // Cinematic light sweep: a soft diagonal beam panning across every ~5s.
+  const sweepX = ((frame % 150) / 150) * 240 - 70
   return (
     <AbsoluteFill>
-      {/* deep base */}
+      {/* gradient-mesh base: three colour poles instead of one flat radial */}
       <AbsoluteFill style={{ background: `radial-gradient(120% 90% at 50% 22%, ${lift} 0%, ${base} 55%, ${deep} 100%)` }} />
-      {/* perspective floor grid, drifting toward the viewer */}
+      <AbsoluteFill style={{ background: `radial-gradient(70% 55% at ${22 + Math.sin(frame * 0.012) * 8}% ${20 + Math.cos(frame * 0.01) * 6}%, ${hexA(hot, 0.5)} 0%, transparent 65%)` }} />
+      <AbsoluteFill style={{ background: `radial-gradient(80% 60% at ${78 + Math.cos(frame * 0.011) * 7}% ${76 + Math.sin(frame * 0.013) * 6}%, ${hexA(shade(accent, -0.6), 0.55)} 0%, transparent 60%)` }} />
+      {/* perspective floor grid, accent-tinted, drifting toward the viewer */}
       <div style={{
         position: 'absolute', left: '-40%', right: '-40%', bottom: '-4%', height: '46%',
-        backgroundImage: `linear-gradient(${hexA('#FFFFFF', 0.13)} 1.5px, transparent 1.5px), linear-gradient(90deg, ${hexA('#FFFFFF', 0.13)} 1.5px, transparent 1.5px)`,
+        backgroundImage: `linear-gradient(${hexA(hot, 0.2)} 1.5px, transparent 1.5px), linear-gradient(90deg, ${hexA(hot, 0.2)} 1.5px, transparent 1.5px)`,
         backgroundSize: '110px 110px',
         backgroundPosition: `0px ${(frame * 0.6) % 110}px`,
         transform: 'perspective(700px) rotateX(62deg)', transformOrigin: '50% 0%',
         maskImage: 'linear-gradient(180deg, transparent 0%, black 45%)',
         WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, black 45%)',
       }} />
+      {/* glowing horizon line where the grid meets the field */}
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: '42%', height: 2, background: `linear-gradient(90deg, transparent 8%, ${hexA(hot, 0.55)} 50%, transparent 92%)`, boxShadow: `0 0 26px ${hexA(hot, 0.6)}`, opacity: 0.5 + Math.sin(frame * 0.05) * 0.15 }} />
       {/* glow orbs on slow orbits */}
       <div style={{
-        position: 'absolute', width: 720, height: 720, borderRadius: 720, filter: 'blur(110px)',
-        background: hexA(accent, 0.55), opacity: 0.5,
-        left: `calc(${18 + Math.sin(frame * 0.014) * 12}% - 360px)`, top: `calc(${16 + Math.cos(frame * 0.011) * 8}% - 360px)`,
+        position: 'absolute', width: 860, height: 860, borderRadius: 860, filter: 'blur(110px)',
+        background: hexA(hot, 0.5), opacity: 0.55,
+        left: `calc(${18 + Math.sin(frame * 0.014) * 12}% - 430px)`, top: `calc(${16 + Math.cos(frame * 0.011) * 8}% - 430px)`,
       }} />
       <div style={{
         position: 'absolute', width: 560, height: 560, borderRadius: 560, filter: 'blur(100px)',
-        background: hexA('#FFFFFF', 0.22), opacity: 0.4,
+        background: hexA('#FFFFFF', 0.26), opacity: 0.45,
         right: `calc(${10 + Math.cos(frame * 0.017) * 10}% - 280px)`, bottom: `calc(${20 + Math.sin(frame * 0.013) * 9}% - 280px)`,
+      }} />
+      {/* soft bokeh depth */}
+      {bokeh.map((b, i) => (
+        <div key={`b${i}`} style={{
+          position: 'absolute', left: `calc(${b.x}% - ${b.s / 2}px)`, top: `calc(${b.y}% - ${b.s / 2}px)`,
+          width: b.s, height: b.s, borderRadius: b.s, filter: 'blur(26px)',
+          background: `radial-gradient(circle, ${hexA('#FFFFFF', b.o)} 0%, transparent 70%)`,
+        }} />
+      ))}
+      {/* cinematic light sweep */}
+      <div style={{
+        position: 'absolute', top: '-25%', bottom: '-25%', width: '34%', left: `${sweepX}%`,
+        transform: 'rotate(14deg)', mixBlendMode: 'screen',
+        background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.07) 38%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.07) 62%, transparent 100%)',
       }} />
       {/* floating particles */}
       {parts.map((p, i) => (
         <div key={i} style={{
           position: 'absolute', left: `${p.px}%`, top: `${p.py}%`, width: p.size, height: p.size,
-          borderRadius: 100, background: i % 3 === 0 ? accent : '#FFFFFF', opacity: p.tw,
-          boxShadow: `0 0 ${p.size * 3}px ${i % 3 === 0 ? hexA(accent, 0.9) : hexA('#FFFFFF', 0.7)}`,
+          borderRadius: 100, background: i % 3 === 0 ? hot : '#FFFFFF', opacity: p.tw,
+          boxShadow: `0 0 ${p.size * 3}px ${i % 3 === 0 ? hexA(hot, 0.9) : hexA('#FFFFFF', 0.7)}`,
         }} />
       ))}
-      {/* vignette + grain */}
-      <AbsoluteFill style={{ background: 'radial-gradient(115% 85% at 50% 45%, transparent 55%, rgba(0,0,0,0.42) 100%)' }} />
+      {/* light vignette + grain (framing, not darkness) */}
+      <AbsoluteFill style={{ background: 'radial-gradient(115% 85% at 50% 45%, transparent 60%, rgba(0,0,0,0.28) 100%)' }} />
       <AbsoluteFill style={{ backgroundImage: GRAIN_URI, backgroundSize: '160px 160px', opacity: 0.05, mixBlendMode: 'overlay' }} />
     </AbsoluteFill>
   )
@@ -180,40 +216,50 @@ export const Beat: React.FC<{
       </AbsoluteFill>
     )
   }
-  // Branded CTA end-card (Studio v2 slice 3, premium pass): the reel's closer.
-  // Brand LOGO (when the brand has one) springs in above a spaced-caps name and a
-  // shimmering accent rule; the CTA line renders big via Captions (keeping the reel's
-  // typography) over a breathing glow so the card never sits still. No footage, no zones.
+  // Branded CTA end-card (Studio v2, agency pass): the reel's closer as an EDITORIAL
+  // LOCKUP — no container box. The logo levitates in free space, the brand name
+  // renders as a serif WORDMARK with an accent full stop (the "Creslo." mark style,
+  // every brand gets the same treatment in its own colour), a hairline gradient rule
+  // draws beneath it, and the CTA line breathes over the glow. 0.6-1.2s ease-outs;
+  // nothing sits still. No footage, no zones.
   if (beatType === 'cta') {
-    const logoS = spring({ frame: frame - 2, fps, config: { damping: 12, mass: 0.6, stiffness: 160 } })
-    const eyebrow = interpolate(frame, [4, 12], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
-    const rule = interpolate(frame, [8, 18], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+    const logoS = spring({ frame: frame - 2, fps, config: { damping: 13, mass: 0.7, stiffness: 120 } })
+    const nameS = spring({ frame: frame - 9, fps, config: { damping: 16, mass: 0.8, stiffness: 110 } })
+    const rule = interpolate(frame, [16, 34], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
     const breathe = 1 + Math.sin(frame * 0.09) * 0.012
     const glow = 0.45 + Math.sin(frame * 0.13) * 0.18
+    const float = Math.sin(frame * 0.045) * 7 // slow levitation of the whole lockup
+    const name = String(brandName || '').trim()
+    const endsPunct = /[.!?]$/.test(name)
+    // Wordmark scales to the name so long business names never clip at 1080 wide.
+    const nameSize = Math.min(84, Math.max(46, Math.round(1000 / Math.max(8, name.length))))
     return (
       <AbsoluteFill style={{ opacity }}>
         <BrandField accent={accent} frame={frame} dark />
         {/* breathing accent glow behind the CTA line */}
-        <div style={{ position: 'absolute', left: '50%', top: '50%', width: 900, height: 900, transform: 'translate(-50%, -50%)', background: `radial-gradient(circle, ${hexA(accent, 0.32)} 0%, transparent 62%)`, opacity: glow }} />
-        {/* glassmorphism identity panel */}
-        <div style={{ position: 'absolute', top: '17%', left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20,
-          padding: '44px 64px', borderRadius: 36,
-          background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.16)',
-          backdropFilter: 'blur(22px)', WebkitBackdropFilter: 'blur(22px)',
-          boxShadow: '0 40px 90px -40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.18)',
-        }}>
+        <div style={{ position: 'absolute', left: '50%', top: '50%', width: 900, height: 900, transform: 'translate(-50%, -50%)', background: `radial-gradient(circle, ${hexA(accent, 0.3)} 0%, transparent 62%)`, opacity: glow }} />
+        {/* identity lockup — floats free, no panel */}
+        <div style={{ position: 'absolute', top: '14%', left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, transform: `translateY(${float}px)` }}>
           {brandLogo ? (
             <Img src={brandLogo} style={{
-              width: 128, height: 128, borderRadius: 30, objectFit: 'cover',
-              opacity: logoS, transform: `scale(${0.7 + 0.3 * logoS})`,
-              boxShadow: '0 30px 60px -28px rgba(0,0,0,.6)',
+              width: 150, height: 150, borderRadius: 36, objectFit: 'cover',
+              opacity: logoS, transform: `scale(${0.72 + 0.28 * logoS}) translateY(${(1 - logoS) * 34}px)`,
+              boxShadow: `0 46px 90px -36px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.15), 0 0 70px ${hexA(shade(accent, 0.42), 0.3)}`,
             }} />
           ) : null}
-          {brandName ? <div style={{ fontFamily: "'Arial', sans-serif", fontWeight: 800, fontSize: 27, letterSpacing: '0.34em', textTransform: 'uppercase', color: '#FFFFFF', opacity: eyebrow * 0.92, paddingLeft: '0.34em' }}>{brandName}</div> : null}
-          <div style={{ width: 130 * rule, height: 5, borderRadius: 4, background: accent, opacity: rule, boxShadow: `0 0 ${12 + glow * 14}px ${hexA(accent, 0.8)}` }} />
-        </div>
+          {name ? (
+            <div style={{ overflow: 'hidden', padding: '0.1em 0.12em' }}>
+              {/* serif wordmark rising through a mask — the brand's "name style" moment */}
+              <div style={{
+                fontFamily: WORDMARK_FONT, fontWeight: 400, fontSize: nameSize, lineHeight: 1.06,
+                color: '#FFFFFF', whiteSpace: 'nowrap', textShadow: '0 10px 44px rgba(0,0,0,.4)',
+                opacity: nameS, transform: `translateY(${(1 - nameS) * 108}%)`,
+              }}>
+                {name}{endsPunct ? '' : <span style={{ color: shade(accent, 0.45) }}>.</span>}
+              </div>
+            </div>
+          ) : null}
+          <div style={{ width: 210 * rule, height: 3, borderRadius: 4, background: `linear-gradient(90deg, transparent, ${shade(accent, 0.4)}, transparent)`, opacity: rule, boxShadow: `0 0 ${14 + glow * 16}px ${hexA(shade(accent, 0.4), 0.9)}` }} />
         </div>
         <div style={{ position: 'absolute', inset: 0, transform: `scale(${breathe})` }}>
           <Captions text={text} accent={accent} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
