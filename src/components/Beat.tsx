@@ -52,15 +52,18 @@ const GRADE_PRESETS: Record<string, string> = {
 // particles -> vignette -> film grain. Pure CSS/SVG, cheap per frame.
 // MUST stay byte-identical in both composition mirrors.
 const GRAIN_URI = "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/></filter><rect width=%22160%22 height=%22160%22 filter=%22url(%23n)%22 opacity=%220.5%22/></svg>')"
-const BrandField: React.FC<{ accent: string; frame: number; dark?: boolean }> = ({ accent, frame, dark }) => {
-  // v2 (agency pass): a rich, colour-SATURATED stage — never crushed toward black.
-  // 'dark' now means "deep jewel tone of the brand colour", not "murky". The brand
-  // colour is the star in both polarities; light comes from a gradient mesh, a slow
-  // cinematic sweep pass and bokeh depth, so the field feels lit, not dimmed.
-  const base = dark ? shade(accent, -0.32) : shade(accent, -0.06)
-  const deep = dark ? shade(accent, -0.5) : shade(accent, -0.24)
-  const lift = dark ? shade(accent, -0.1) : shade(accent, 0.24)
-  const hot = shade(accent, 0.42)
+const BrandField: React.FC<{ accent: string; frame: number; dark?: boolean; tone?: 'light' | 'rich' | 'deep' }> = ({ accent, frame, dark, tone }) => {
+  // v3 (field tones): three polarities of the SAME brand-colour stage.
+  //   'light' — cream editorial ground (the brand-banner aesthetic): pale tints of the
+  //             brand colour, deep-brand accents carrying the detail. For brands whose
+  //             premium register is bright (cafés, salons, cream-and-brown identities).
+  //   'rich'  — the saturated mid default. 'deep' — jewel tone, never murky black.
+  // Chosen per reel via reel.fieldTone (mood presets + the planner set it).
+  const t = tone || (dark ? 'deep' : 'rich')
+  const base = t === 'light' ? shade(accent, 0.6) : (t === 'deep' ? shade(accent, -0.32) : shade(accent, -0.06))
+  const deep = t === 'light' ? shade(accent, 0.38) : (t === 'deep' ? shade(accent, -0.5) : shade(accent, -0.24))
+  const lift = t === 'light' ? shade(accent, 0.78) : (t === 'deep' ? shade(accent, -0.1) : shade(accent, 0.24))
+  const hot = t === 'light' ? shade(accent, -0.05) : shade(accent, 0.42)
   // Deterministic particle field (no randomness - identical on every render).
   const parts = Array.from({ length: 16 }, (_, i) => {
     const px = ((i * 61) % 97) / 97 * 100
@@ -104,7 +107,7 @@ const BrandField: React.FC<{ accent: string; frame: number; dark?: boolean }> = 
       }} />
       <div style={{
         position: 'absolute', width: 560, height: 560, borderRadius: 560, filter: 'blur(100px)',
-        background: hexA('#FFFFFF', 0.26), opacity: 0.45,
+        background: t === 'light' ? hexA(accent, 0.3) : hexA('#FFFFFF', 0.26), opacity: 0.45,
         right: `calc(${10 + Math.cos(frame * 0.017) * 10}% - 280px)`, bottom: `calc(${20 + Math.sin(frame * 0.013) * 9}% - 280px)`,
       }} />
       {/* soft bokeh depth */}
@@ -129,8 +132,8 @@ const BrandField: React.FC<{ accent: string; frame: number; dark?: boolean }> = 
           boxShadow: `0 0 ${p.size * 3}px ${i % 3 === 0 ? hexA(hot, 0.9) : hexA('#FFFFFF', 0.7)}`,
         }} />
       ))}
-      {/* light vignette + grain (framing, not darkness) */}
-      <AbsoluteFill style={{ background: 'radial-gradient(115% 85% at 50% 45%, transparent 60%, rgba(0,0,0,0.28) 100%)' }} />
+      {/* light vignette + grain (framing, not darkness; warm brown on the light tone) */}
+      <AbsoluteFill style={{ background: `radial-gradient(115% 85% at 50% 45%, transparent 60%, ${t === 'light' ? 'rgba(90,58,30,0.14)' : 'rgba(0,0,0,0.28)'} 100%)` }} />
       <AbsoluteFill style={{ backgroundImage: GRAIN_URI, backgroundSize: '160px 160px', opacity: 0.05, mixBlendMode: 'overlay' }} />
     </AbsoluteFill>
   )
@@ -152,9 +155,10 @@ export const Beat: React.FC<{
   brandName?: string
   brandLogo?: string | null
   brandWordmark?: string | null
+  fieldTone?: 'light' | 'rich' | 'deep'
   kenBurns?: { enabled?: boolean; intensity?: number } | null
   grade?: string | null
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, poster, brandName, brandLogo, brandWordmark, kenBurns, grade }) => {
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, poster, brandName, brandLogo, brandWordmark, fieldTone, kenBurns, grade }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   // A failed clip fetch (e.g. a Pexels CDN 503) flips this so the beat degrades to the branded
@@ -178,13 +182,25 @@ export const Beat: React.FC<{
   // rendered at hook scale. Footage and caption zones don't apply here.
   // MUST stay byte-identical to the frontend mirror src/remotion/ReelVideo.tsx.
   if (beatType === 'text') {
-    const dark = index % 2 === 1
+    // Field tone: the reel-level look (mood preset / planner choice) wins; without one,
+    // beats alternate rich/deep as before. Type colour tracks the tone - deep brand
+    // ink on the light cream field, white on deep, auto-contrast on rich.
+    const tone = fieldTone || (index % 2 === 1 ? 'deep' : 'rich')
+    const textCol = tone === 'light' ? shade(accent, -0.52) : (tone === 'deep' ? '#FFFFFF' : idealText(accent))
+    // On the light field, preset text colours designed for dark grounds (cream/white)
+    // would vanish - override textColor to the tone's ink for this beat only.
+    let cfg = captionConfig
+    if (tone === 'light' && cfg) {
+      const patched: any = {}
+      for (const k of Object.keys(cfg)) { const v = (cfg as any)[k]; patched[k] = v && v.textColor ? { ...v, textColor: textCol } : v }
+      cfg = patched
+    }
     return (
       <AbsoluteFill style={{ opacity }}>
-        <BrandField accent={accent} frame={frame} dark={dark} />
+        <BrandField accent={accent} frame={frame} tone={tone} />
         {/* slow push-in keeps the type alive for the whole beat */}
         <div style={{ position: 'absolute', inset: 0, transform: `scale(${1 + (frame / Math.max(1, durationInFrames)) * 0.05})` }}>
-          <Captions text={text} accent={dark ? '#FFFFFF' : idealText(accent)} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+          <Captions text={text} accent={textCol} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={cfg} emphasis={emphasis} />
         </div>
       </AbsoluteFill>
     )
@@ -236,7 +252,9 @@ export const Beat: React.FC<{
     const nameSize = Math.min(84, Math.max(46, Math.round(1000 / Math.max(8, name.length))))
     return (
       <AbsoluteFill style={{ opacity }}>
-        <BrandField accent={accent} frame={frame} dark />
+        {/* the CTA stays on the deep tone regardless of fieldTone: the identity lockup
+            (cream wordmark, glowing rule) is designed for the dark ground */}
+        <BrandField accent={accent} frame={frame} tone="deep" />
         {/* breathing accent glow behind the CTA line */}
         <div style={{ position: 'absolute', left: '50%', top: '50%', width: 900, height: 900, transform: 'translate(-50%, -50%)', background: `radial-gradient(circle, ${hexA(accent, 0.3)} 0%, transparent 62%)`, opacity: glow }} />
         {/* identity lockup — floats free, no panel */}

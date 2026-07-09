@@ -57,6 +57,10 @@ export type ReelData = {
   // The brand's NAME-STYLE mark image (brands.wordmark_url). When present the CTA
   // end-card shows this exact mark; otherwise the name renders in the serif wordmark style.
   brandWordmark?: string | null
+  // Field tone for text beats: 'light' cream editorial / 'rich' saturated mid /
+  // 'deep' jewel. Set by mood presets or the planner's look choice; absent = classic
+  // alternating rich/deep. The CTA end-card always uses 'deep'.
+  fieldTone?: 'light' | 'rich' | 'deep'
   // Audio plumbing (slice 5): background music + optional narration, mixed at render.
   music?: { url?: string; volume?: number } | null
   voiceoverUrl?: string | null
