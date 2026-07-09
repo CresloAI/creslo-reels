@@ -40,6 +40,66 @@ const GRADE_PRESETS: Record<string, string> = {
   neutral: 'none',
 }
 
+
+// ===== BrandField: the premium brand-colour stage behind text/CTA beats. =====
+// Layers (back to front): deep radial base -> perspective floor grid drifting toward
+// the viewer -> two huge blurred glow orbs on slow orbits -> floating twinkling
+// particles -> vignette -> film grain. Pure CSS/SVG, cheap per frame.
+// MUST stay byte-identical in both composition mirrors.
+const GRAIN_URI = "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/></filter><rect width=%22160%22 height=%22160%22 filter=%22url(%23n)%22 opacity=%220.5%22/></svg>')"
+const BrandField: React.FC<{ accent: string; frame: number; dark?: boolean }> = ({ accent, frame, dark }) => {
+  const base = dark ? shade(accent, -0.55) : shade(accent, -0.15)
+  const deep = dark ? shade(accent, -0.72) : shade(accent, -0.4)
+  const lift = dark ? shade(accent, -0.3) : shade(accent, 0.12)
+  // Deterministic particle field (no randomness - identical on every render).
+  const parts = Array.from({ length: 16 }, (_, i) => {
+    const px = ((i * 61) % 97) / 97 * 100
+    const seed = (i * 37) % 83
+    const py = ((seed / 83) * 120 - ((frame * (0.25 + (i % 5) * 0.08)) % 120) + 120) % 120 - 10
+    const tw = 0.35 + 0.3 * Math.sin(frame * 0.06 + i * 1.7)
+    const size = 3 + (i % 4) * 2.5
+    return { px, py, tw, size }
+  })
+  return (
+    <AbsoluteFill>
+      {/* deep base */}
+      <AbsoluteFill style={{ background: `radial-gradient(120% 90% at 50% 22%, ${lift} 0%, ${base} 55%, ${deep} 100%)` }} />
+      {/* perspective floor grid, drifting toward the viewer */}
+      <div style={{
+        position: 'absolute', left: '-40%', right: '-40%', bottom: '-4%', height: '46%',
+        backgroundImage: `linear-gradient(${hexA('#FFFFFF', 0.13)} 1.5px, transparent 1.5px), linear-gradient(90deg, ${hexA('#FFFFFF', 0.13)} 1.5px, transparent 1.5px)`,
+        backgroundSize: '110px 110px',
+        backgroundPosition: `0px ${(frame * 0.6) % 110}px`,
+        transform: 'perspective(700px) rotateX(62deg)', transformOrigin: '50% 0%',
+        maskImage: 'linear-gradient(180deg, transparent 0%, black 45%)',
+        WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, black 45%)',
+      }} />
+      {/* glow orbs on slow orbits */}
+      <div style={{
+        position: 'absolute', width: 720, height: 720, borderRadius: 720, filter: 'blur(110px)',
+        background: hexA(accent, 0.55), opacity: 0.5,
+        left: `calc(${18 + Math.sin(frame * 0.014) * 12}% - 360px)`, top: `calc(${16 + Math.cos(frame * 0.011) * 8}% - 360px)`,
+      }} />
+      <div style={{
+        position: 'absolute', width: 560, height: 560, borderRadius: 560, filter: 'blur(100px)',
+        background: hexA('#FFFFFF', 0.22), opacity: 0.4,
+        right: `calc(${10 + Math.cos(frame * 0.017) * 10}% - 280px)`, bottom: `calc(${20 + Math.sin(frame * 0.013) * 9}% - 280px)`,
+      }} />
+      {/* floating particles */}
+      {parts.map((p, i) => (
+        <div key={i} style={{
+          position: 'absolute', left: `${p.px}%`, top: `${p.py}%`, width: p.size, height: p.size,
+          borderRadius: 100, background: i % 3 === 0 ? accent : '#FFFFFF', opacity: p.tw,
+          boxShadow: `0 0 ${p.size * 3}px ${i % 3 === 0 ? hexA(accent, 0.9) : hexA('#FFFFFF', 0.7)}`,
+        }} />
+      ))}
+      {/* vignette + grain */}
+      <AbsoluteFill style={{ background: 'radial-gradient(115% 85% at 50% 45%, transparent 55%, rgba(0,0,0,0.42) 100%)' }} />
+      <AbsoluteFill style={{ backgroundImage: GRAIN_URI, backgroundSize: '160px 160px', opacity: 0.05, mixBlendMode: 'overlay' }} />
+    </AbsoluteFill>
+  )
+}
+
 export const Beat: React.FC<{
   text: string
   isHook: boolean
@@ -81,13 +141,10 @@ export const Beat: React.FC<{
   // rendered at hook scale. Footage and caption zones don't apply here.
   // MUST stay byte-identical to the frontend mirror src/remotion/ReelVideo.tsx.
   if (beatType === 'text') {
-    const drift = frame * 0.15
     const dark = index % 2 === 1
-    const bgA = dark ? shade(accent, -0.5) : shade(accent, 0.1)
-    const bgB = dark ? shade(accent, -0.25) : shade(accent, -0.18)
     return (
       <AbsoluteFill style={{ opacity }}>
-        <AbsoluteFill style={{ background: `radial-gradient(130% 100% at ${50 + Math.sin(drift * 0.08) * 14}% ${30 + Math.cos(drift * 0.06) * 10}%, ${bgA} 0%, ${bgB} 62%, ${shade(accent, dark ? -0.62 : -0.3)} 100%)` }} />
+        <BrandField accent={accent} frame={frame} dark={dark} />
         {/* slow push-in keeps the type alive for the whole beat */}
         <div style={{ position: 'absolute', inset: 0, transform: `scale(${1 + (frame / Math.max(1, durationInFrames)) * 0.05})` }}>
           <Captions text={text} accent={dark ? '#FFFFFF' : idealText(accent)} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
@@ -135,10 +192,18 @@ export const Beat: React.FC<{
     const glow = 0.45 + Math.sin(frame * 0.13) * 0.18
     return (
       <AbsoluteFill style={{ opacity }}>
-        <AbsoluteFill style={{ background: `radial-gradient(120% 90% at 50% 20%, ${shade(accent, -0.35)} 0%, ${shade(accent, -0.55)} 60%, ${shade(accent, -0.7)} 100%)` }} />
+        <BrandField accent={accent} frame={frame} dark />
         {/* breathing accent glow behind the CTA line */}
         <div style={{ position: 'absolute', left: '50%', top: '50%', width: 900, height: 900, transform: 'translate(-50%, -50%)', background: `radial-gradient(circle, ${hexA(accent, 0.32)} 0%, transparent 62%)`, opacity: glow }} />
-        <div style={{ position: 'absolute', top: '20%', left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+        {/* glassmorphism identity panel */}
+        <div style={{ position: 'absolute', top: '17%', left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20,
+          padding: '44px 64px', borderRadius: 36,
+          background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.16)',
+          backdropFilter: 'blur(22px)', WebkitBackdropFilter: 'blur(22px)',
+          boxShadow: '0 40px 90px -40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.18)',
+        }}>
           {brandLogo ? (
             <Img src={brandLogo} style={{
               width: 128, height: 128, borderRadius: 30, objectFit: 'cover',
@@ -148,6 +213,7 @@ export const Beat: React.FC<{
           ) : null}
           {brandName ? <div style={{ fontFamily: "'Arial', sans-serif", fontWeight: 800, fontSize: 27, letterSpacing: '0.34em', textTransform: 'uppercase', color: '#FFFFFF', opacity: eyebrow * 0.92, paddingLeft: '0.34em' }}>{brandName}</div> : null}
           <div style={{ width: 130 * rule, height: 5, borderRadius: 4, background: accent, opacity: rule, boxShadow: `0 0 ${12 + glow * 14}px ${hexA(accent, 0.8)}` }} />
+        </div>
         </div>
         <div style={{ position: 'absolute', inset: 0, transform: `scale(${breathe})` }}>
           <Captions text={text} accent={accent} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
