@@ -54,6 +54,9 @@ export type ReelData = {
   // Brand display name + logo for the CTA end-card (slice 3).
   brandName?: string
   brandLogo?: string | null
+  // The brand's NAME-STYLE mark image (brands.wordmark_url). When present the CTA
+  // end-card shows this exact mark; otherwise the name renders in the serif wordmark style.
+  brandWordmark?: string | null
   // Audio plumbing (slice 5): background music + optional narration, mixed at render.
   music?: { url?: string; volume?: number } | null
   voiceoverUrl?: string | null

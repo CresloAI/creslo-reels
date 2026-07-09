@@ -75,6 +75,7 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
           poster={b.poster}
           brandName={reel.brandName}
           brandLogo={reel.brandLogo}
+          brandWordmark={reel.brandWordmark}
           kenBurns={reel.kenBurns}
           grade={reel.grade}
         />

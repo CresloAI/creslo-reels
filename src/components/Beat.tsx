@@ -151,9 +151,10 @@ export const Beat: React.FC<{
   poster?: string | null
   brandName?: string
   brandLogo?: string | null
+  brandWordmark?: string | null
   kenBurns?: { enabled?: boolean; intensity?: number } | null
   grade?: string | null
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, poster, brandName, brandLogo, kenBurns, grade }) => {
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, poster, brandName, brandLogo, brandWordmark, kenBurns, grade }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   // A failed clip fetch (e.g. a Pexels CDN 503) flips this so the beat degrades to the branded
@@ -247,7 +248,16 @@ export const Beat: React.FC<{
               boxShadow: `0 46px 90px -36px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.15), 0 0 70px ${hexA(shade(accent, 0.42), 0.3)}`,
             }} />
           ) : null}
-          {name ? (
+          {brandWordmark ? (
+            <div style={{ overflow: 'hidden', padding: '0.1em 0.12em' }}>
+              {/* the brand's REAL wordmark image (brands.wordmark_url) rising through a mask */}
+              <Img src={brandWordmark} style={{
+                maxWidth: 640, maxHeight: 150, objectFit: 'contain', display: 'block',
+                opacity: nameS, transform: `translateY(${(1 - nameS) * 60}px)`,
+                filter: 'drop-shadow(0 10px 34px rgba(0,0,0,.35))',
+              }} />
+            </div>
+          ) : name ? (
             <div style={{ overflow: 'hidden', padding: '0.1em 0.12em' }}>
               {/* serif wordmark rising through a mask — the brand's "name style" moment */}
               <div style={{
