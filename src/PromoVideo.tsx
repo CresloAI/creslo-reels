@@ -15,7 +15,7 @@
 // scale, every element animatable). Real app screenshots can replace the screen via
 // staticFile('promo/…') later without changing the choreography.
 import React from 'react'
-import { AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig, interpolate, spring, staticFile, Img } from 'remotion'
+import { AbsoluteFill, Audio, Sequence, useCurrentFrame, useVideoConfig, interpolate, spring, staticFile, Img } from 'remotion'
 import { loadFont as loadDMSerifDisplay } from '@remotion/google-fonts/DMSerifDisplay'
 import { loadFont as loadDMSans } from '@remotion/google-fonts/DMSans'
 
@@ -310,8 +310,16 @@ const Cta: React.FC = () => {
 }
 
 // ---------- timeline ----------
-export const PromoVideo: React.FC = () => (
+// Audio is prop-driven so the composition renders cleanly BEFORE the files exist:
+// drop vo.mp3 / music.mp3 into public/promo/ then render with
+//   npx remotion render CresloPromo out/creslo-promo.mp4 \
+//     --props='{"voiceover":"promo/vo.mp3","music":"promo/music.mp3"}' --crf=17 --jpeg-quality=95
+// (VO script + per-beat timings: Creslo/04 Marketing/Reels-Launch-Pack.md §1.)
+export type PromoProps = { voiceover?: string | null; music?: string | null; musicVolume?: number }
+export const PromoVideo: React.FC<PromoProps> = ({ voiceover = null, music = null, musicVolume = 0.22 }) => (
   <AbsoluteFill style={{ background: CREAM }}>
+    {music ? <Audio src={staticFile(music)} volume={musicVolume} /> : null}
+    {voiceover ? <Audio src={staticFile(voiceover)} /> : null}
     <Sequence durationInFrames={55}><Hook /></Sequence>
     <Sequence from={55} durationInFrames={65}><SoIs /></Sequence>
     <Sequence from={120} durationInFrames={110}><Pain /></Sequence>

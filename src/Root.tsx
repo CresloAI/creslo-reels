@@ -24,11 +24,14 @@ export const RemotionRoot: React.FC = () => {
           shares the font pipeline; harmless to the deployed reels site. */}
       <Composition
         id="CresloPromo"
-        component={PromoVideo}
+        component={PromoVideo as React.FC<Record<string, unknown>>}
         durationInFrames={PROMO_FRAMES}
         fps={PROMO_FPS}
         width={PROMO_W}
         height={PROMO_H}
+        // Audio rides in via --props at render time (or the Studio props panel) once
+        // vo.mp3 / music.mp3 land in public/promo/ — null-safe until then.
+        defaultProps={{ voiceover: null, music: null, musicVolume: 0.22 }}
       />
     </>
   )
