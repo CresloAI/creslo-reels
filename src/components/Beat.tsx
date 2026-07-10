@@ -252,9 +252,9 @@ export const Beat: React.FC<{
     const nameSize = Math.min(84, Math.max(46, Math.round(1000 / Math.max(8, name.length))))
     return (
       <AbsoluteFill style={{ opacity }}>
-        {/* the CTA stays on the deep tone regardless of fieldTone: the identity lockup
-            (cream wordmark, glowing rule) is designed for the dark ground */}
-        <BrandField accent={accent} frame={frame} tone="deep" />
+        {/* the CTA accepts rich/deep tone overrides (storyboard ↻) but never light:
+            the identity lockup (cream wordmark, glowing rule) needs a dark ground */}
+        <BrandField accent={accent} frame={frame} tone={fieldTone === 'rich' ? 'rich' : 'deep'} />
         {/* breathing accent glow behind the CTA line */}
         <div style={{ position: 'absolute', left: '50%', top: '50%', width: 900, height: 900, transform: 'translate(-50%, -50%)', background: `radial-gradient(circle, ${hexA(accent, 0.3)} 0%, transparent 62%)`, opacity: glow }} />
         {/* identity lockup — floats free, no panel */}

@@ -16,6 +16,9 @@ export type ReelScene = {
   // Kinetic text beat (slice 1) / branded CTA end-card (slice 3): no footage needed.
   // 'mockup' (slice 4): the scene's poster image inside a phone frame (their website/menu).
   beat_type?: 'clip' | 'text' | 'cta' | 'mockup'
+  // Per-beat field-tone override (the storyboard's ↻ layout swap on text/CTA beats);
+  // wins over reel.fieldTone for this beat only.
+  field_tone?: 'light' | 'rich' | 'deep'
 }
 
 // Single source of truth for caption-style keys. The union AND the render-side
@@ -94,6 +97,7 @@ export type Beat = {
   zone?: CaptionZone
   beatType?: 'clip' | 'text' | 'cta' | 'mockup'
   poster?: string | null
+  fieldTone?: 'light' | 'rich' | 'deep'
 }
 
 export function buildBeats(reel: ReelData): Beat[] {
@@ -123,6 +127,7 @@ export function buildBeats(reel: ReelData): Beat[] {
       zone: s.caption_zone,
       beatType: (s.beat_type === 'text' || s.beat_type === 'cta' || s.beat_type === 'mockup') ? s.beat_type : 'clip',
       poster: s.poster || null,
+      fieldTone: (s.field_tone === 'light' || s.field_tone === 'rich' || s.field_tone === 'deep') ? s.field_tone : undefined,
     })
   }
   if (!beats.length) beats.push({ text: '', isHook: true, clipUrl: null, seconds: 3, emphasis: [] })
