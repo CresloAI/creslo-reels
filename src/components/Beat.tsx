@@ -156,9 +156,12 @@ export const Beat: React.FC<{
   brandLogo?: string | null
   brandWordmark?: string | null
   fieldTone?: 'light' | 'rich' | 'deep'
+  // Per-beat field COLOUR override (storyboard edit popup): the whole text/CTA stage
+  // re-derives from this hue instead of the brand colour. Absent = brand colour.
+  fieldColor?: string | null
   kenBurns?: { enabled?: boolean; intensity?: number } | null
   grade?: string | null
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, poster, brandName, brandLogo, brandWordmark, fieldTone, kenBurns, grade }) => {
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, poster, brandName, brandLogo, brandWordmark, fieldTone, fieldColor, kenBurns, grade }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   // A failed clip fetch (e.g. a Pexels CDN 503) flips this so the beat degrades to the branded
@@ -186,7 +189,9 @@ export const Beat: React.FC<{
     // beats alternate rich/deep as before. Type colour tracks the tone - deep brand
     // ink on the light cream field, white on deep, auto-contrast on rich.
     const tone = fieldTone || (index % 2 === 1 ? 'deep' : 'rich')
-    const textCol = tone === 'light' ? shade(accent, -0.52) : (tone === 'deep' ? '#FFFFFF' : idealText(accent))
+    // fx: the hue this beat's stage derives from — per-beat colour override or brand.
+    const fx = (fieldColor && /^#[0-9a-fA-F]{3,8}$/.test(fieldColor)) ? fieldColor : accent
+    const textCol = tone === 'light' ? shade(fx, -0.52) : (tone === 'deep' ? '#FFFFFF' : idealText(fx))
     // On the light field, preset text colours designed for dark grounds (cream/white)
     // would vanish - override textColor to the tone's ink for this beat only.
     let cfg = captionConfig
@@ -197,7 +202,7 @@ export const Beat: React.FC<{
     }
     return (
       <AbsoluteFill style={{ opacity }}>
-        <BrandField accent={accent} frame={frame} tone={tone} />
+        <BrandField accent={fx} frame={frame} tone={tone} />
         {/* slow push-in keeps the type alive for the whole beat */}
         <div style={{ position: 'absolute', inset: 0, transform: `scale(${1 + (frame / Math.max(1, durationInFrames)) * 0.05})` }}>
           <Captions text={text} accent={textCol} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={cfg} emphasis={emphasis} />
@@ -240,6 +245,9 @@ export const Beat: React.FC<{
   // draws beneath it, and the CTA line breathes over the glow. 0.6-1.2s ease-outs;
   // nothing sits still. No footage, no zones.
   if (beatType === 'cta') {
+    // fx: per-beat colour override or brand — the whole card (field, glow, rule,
+    // wordmark dot) re-derives from it so the hue swap stays harmonised.
+    const fx = (fieldColor && /^#[0-9a-fA-F]{3,8}$/.test(fieldColor)) ? fieldColor : accent
     const logoS = spring({ frame: frame - 2, fps, config: { damping: 13, mass: 0.7, stiffness: 120 } })
     const nameS = spring({ frame: frame - 9, fps, config: { damping: 16, mass: 0.8, stiffness: 110 } })
     const rule = interpolate(frame, [16, 34], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
@@ -254,16 +262,16 @@ export const Beat: React.FC<{
       <AbsoluteFill style={{ opacity }}>
         {/* the CTA accepts rich/deep tone overrides (storyboard ↻) but never light:
             the identity lockup (cream wordmark, glowing rule) needs a dark ground */}
-        <BrandField accent={accent} frame={frame} tone={fieldTone === 'rich' ? 'rich' : 'deep'} />
+        <BrandField accent={fx} frame={frame} tone={fieldTone === 'rich' ? 'rich' : 'deep'} />
         {/* breathing accent glow behind the CTA line */}
-        <div style={{ position: 'absolute', left: '50%', top: '50%', width: 900, height: 900, transform: 'translate(-50%, -50%)', background: `radial-gradient(circle, ${hexA(accent, 0.3)} 0%, transparent 62%)`, opacity: glow }} />
+        <div style={{ position: 'absolute', left: '50%', top: '50%', width: 900, height: 900, transform: 'translate(-50%, -50%)', background: `radial-gradient(circle, ${hexA(fx, 0.3)} 0%, transparent 62%)`, opacity: glow }} />
         {/* identity lockup — floats free, no panel */}
         <div style={{ position: 'absolute', top: '14%', left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, transform: `translateY(${float}px)` }}>
           {brandLogo ? (
             <Img src={brandLogo} style={{
               width: 150, height: 150, borderRadius: 36, objectFit: 'cover',
               opacity: logoS, transform: `scale(${0.72 + 0.28 * logoS}) translateY(${(1 - logoS) * 34}px)`,
-              boxShadow: `0 46px 90px -36px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.15), 0 0 70px ${hexA(shade(accent, 0.42), 0.3)}`,
+              boxShadow: `0 46px 90px -36px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.15), 0 0 70px ${hexA(shade(fx, 0.42), 0.3)}`,
             }} />
           ) : null}
           {brandWordmark ? (
@@ -283,14 +291,14 @@ export const Beat: React.FC<{
                 color: '#FFFFFF', whiteSpace: 'nowrap', textShadow: '0 10px 44px rgba(0,0,0,.4)',
                 opacity: nameS, transform: `translateY(${(1 - nameS) * 108}%)`,
               }}>
-                {name}{endsPunct ? '' : <span style={{ color: shade(accent, 0.45) }}>.</span>}
+                {name}{endsPunct ? '' : <span style={{ color: shade(fx, 0.45) }}>.</span>}
               </div>
             </div>
           ) : null}
-          <div style={{ width: 210 * rule, height: 3, borderRadius: 4, background: `linear-gradient(90deg, transparent, ${shade(accent, 0.4)}, transparent)`, opacity: rule, boxShadow: `0 0 ${14 + glow * 16}px ${hexA(shade(accent, 0.4), 0.9)}` }} />
+          <div style={{ width: 210 * rule, height: 3, borderRadius: 4, background: `linear-gradient(90deg, transparent, ${shade(fx, 0.4)}, transparent)`, opacity: rule, boxShadow: `0 0 ${14 + glow * 16}px ${hexA(shade(fx, 0.4), 0.9)}` }} />
         </div>
         <div style={{ position: 'absolute', inset: 0, transform: `scale(${breathe})` }}>
-          <Captions text={text} accent={accent} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+          <Captions text={text} accent={fx} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
         </div>
       </AbsoluteFill>
     )
