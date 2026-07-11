@@ -78,6 +78,7 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
           brandWordmark={reel.brandWordmark}
           fieldTone={b.fieldTone || reel.fieldTone}
           fieldColor={b.fieldColor}
+          fieldStyle={b.fieldStyle}
           kenBurns={reel.kenBurns}
           grade={reel.grade}
         />

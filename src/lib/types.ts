@@ -22,6 +22,9 @@ export type ReelScene = {
   // Per-beat field COLOUR override (the storyboard edit popup): the beat's stage
   // re-derives from this hex instead of the brand colour.
   field_color?: string | null
+  // Per-beat field STYLE (the storyboard edit popup): keyed FieldStage treatment
+  // (silk/espresso/bokeh/horizon/embers/aurora/rays/paper/spot). Absent = mesh.
+  field_style?: string | null
 }
 
 // Single source of truth for caption-style keys. The union AND the render-side
@@ -102,6 +105,7 @@ export type Beat = {
   poster?: string | null
   fieldTone?: 'light' | 'rich' | 'deep'
   fieldColor?: string | null
+  fieldStyle?: string | null
 }
 
 export function buildBeats(reel: ReelData): Beat[] {
@@ -133,6 +137,7 @@ export function buildBeats(reel: ReelData): Beat[] {
       poster: s.poster || null,
       fieldTone: (s.field_tone === 'light' || s.field_tone === 'rich' || s.field_tone === 'deep') ? s.field_tone : undefined,
       fieldColor: (typeof s.field_color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(s.field_color)) ? s.field_color : undefined,
+      fieldStyle: (typeof s.field_style === 'string' && /^[a-z]{3,12}$/.test(s.field_style)) ? s.field_style : undefined,
     })
   }
   if (!beats.length) beats.push({ text: '', isHook: true, clipUrl: null, seconds: 3, emphasis: [] })

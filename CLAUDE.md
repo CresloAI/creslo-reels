@@ -18,3 +18,14 @@ change requires a Lambda site redeploy to affect customer renders:
 
 ## Brand rule
 The Creslo logo is ALWAYS the rounded-square OUTLINE containing the serif "C." mark.
+
+## PROOF CONSTANT (Daniel's standing order, 2026-07-10)
+Nothing is handed to Daniel or shipped to users unproofed. Full law: Creslo/02
+Product/Creslo-Creative-Doctrine.md sections 1.5-1.6. The short version:
+1. BEFORE presenting any artifact: run the mechanical lint (markup balance, defined
+   animations, rotate-flatten, smart-layer content zone) AND look at it.
+2. AFTER any deploy (Vercel UI / Lambda site): the AGENT verifies the deployed result
+   in the browser first - screenshots, self-critique, fix - THEN hands over. Daniel's
+   eyes are for taste verdicts, never for catching defects.
+3. Readability law: text always on a contrasting ground, never across a contrast
+   boundary; angles under type <= 15 degrees; shadows must actually contrast.
