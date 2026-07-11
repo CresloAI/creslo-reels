@@ -105,20 +105,32 @@ const Pain: React.FC = () => {
   // Background darkens as the overwhelm builds.
   const dark = interpolate(frame, [0, durationInFrames], [0, 1])
   const bg = `linear-gradient(180deg, ${CREAM} ${interpolate(dark, [0, 1], [100, -40])}%, ${INK} 140%)`
+  // READABILITY LAW fix (2026-07-11, caught in the render proof): the old single
+  // ink-flip at dark>0.45 left "Design the adverts." cream-on-mid-tone at the
+  // gradient's seam. Now (a) the ground COMMITS to ink during line 2's exit (flood),
+  // (b) each line keeps ONE stable ink for its whole life (lines 0-1 dark ink on
+  // cream, 2-4 cream ink on ink), and (c) a soft opposite-tone focus pool rides
+  // behind every line — contrast holds at every instant of the crossfade.
+  const flood = interpolate(frame, [starts[2] - 14, starts[2]], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
   const shake = Math.sin(frame * 1.7) * interpolate(frame, [0, durationInFrames], [0, 5])
   return (
     <AbsoluteFill style={{ background: bg }}>
+      <AbsoluteFill style={{ background: INK, opacity: flood * 0.97 }} />
       {PAIN_LINES.map((line, i) => {
         const local = frame - starts[i]
         if (local < 0 || local > slots[i] + 12) return null
         const inS = spring({ frame: local, fps, config: { damping: 14, mass: 0.5, stiffness: 200 } })
         const out = interpolate(local, [slots[i] - 6, slots[i] + 10], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
         const dir = i % 2 === 0 ? 1 : -1
+        const lineInk = i >= 2 ? CREAM : INK
+        const op = inS * (1 - out)
         return (
           <Center key={i} style={{ transform: `translateX(${shake}px)` }}>
+            {/* focus pool — opposite tone to the line's ink, blurred, fades with the line */}
+            <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 940, height: 300, borderRadius: 300, filter: 'blur(46px)', background: i >= 2 ? 'rgba(43,35,32,.5)' : 'rgba(245,239,224,.55)', opacity: op }} />
             <div style={{
-              fontFamily: sans, fontWeight: 700, fontSize: 92, color: dark > 0.45 ? CREAM : INK, letterSpacing: '-0.01em',
-              opacity: inS * (1 - out),
+              fontFamily: sans, fontWeight: 700, fontSize: 92, color: lineInk, letterSpacing: '-0.01em',
+              opacity: op, position: 'relative',
               transform: `translateX(${interpolate(inS, [0, 1], [90 * dir, 0]) + interpolate(out, [0, 1], [0, -140 * dir])}px) scale(${interpolate(inS, [0, 1], [0.92, 1])})`,
             }}>{line}</div>
           </Center>
