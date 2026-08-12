@@ -8,7 +8,8 @@
     "render": "remotion render ReelVideo out/reel.mp4",
     "render:sample": "remotion render ReelVideo out/reel.mp4 --props=src/sample-reel.json",
     "upgrade": "remotion upgrade",
-    "deploy": "remotion lambda sites create src/index.ts --site-name=creslo-reels"
+    "deploy": "npm test && remotion lambda sites create src/index.ts --site-name=creslo-reels",
+    "test": "node src/test/ink.test.js"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
