@@ -146,7 +146,7 @@ const BrandField: React.FC<{ accent: string; frame: number; dark?: boolean; tone
 // 'mesh' (default) = BrandField v3, which honours the tone. Deterministic layers
 // only (sin/cos of frame) — identical on every render.
 // MUST stay byte-identical in both composition mirrors.
-export const FIELD_LIGHT_STYLES = new Set(['silk', 'rays', 'paper', 'marble', 'gallery', 'linen', 'dawn', 'halftone', 'leak'])
+export const FIELD_LIGHT_STYLES = new Set(['silk', 'rays', 'paper', 'marble', 'gallery', 'linen', 'dawn', 'halftone', 'leak', 'papercut'])
 const FieldStage: React.FC<{ styleKey?: string | null; accent: string; frame: number; tone?: 'light' | 'rich' | 'deep' }> = ({ styleKey, accent, frame, tone }) => {
   const a = accent
   const grain = <AbsoluteFill style={{ backgroundImage: GRAIN_URI, backgroundSize: '160px 160px', opacity: 0.05, mixBlendMode: 'overlay' }} />
@@ -426,6 +426,22 @@ const FieldStage: React.FC<{ styleKey?: string | null; accent: string; frame: nu
           {grain}
         </AbsoluteFill>
       )
+    case 'papercut': { // Paper Cut — cut-and-paste collage (lookbook 48, 2026-07-24): torn ramp
+      // panels pasted at FIXED angles (never animated, so the tilt can't flatten) behind a
+      // central cream torn panel that carries the type. Light ground -> dark ink via FIELD_LIGHT_STYLES.
+      const cream = shade(a, 0.72), cream2 = shade(a, 0.58), soft = shade(a, 0.3)
+      return (
+        <AbsoluteFill>
+          <AbsoluteFill style={{ background: `linear-gradient(158deg, ${cream} 0%, ${cream2} 100%)` }} />
+          <div style={{ position: 'absolute', left: '4%', right: '26%', top: '12%', height: '34%', background: soft, transform: 'rotate(-3deg)', boxShadow: `0 60px 120px -70px ${hexA(shade(a, -0.6), 0.5)}`, clipPath: 'polygon(0 4%,100% 0,98% 96%,2% 100%)' }} />
+          <div style={{ position: 'absolute', left: '30%', right: '4%', top: '40%', height: '34%', background: a, transform: 'rotate(2.4deg)', boxShadow: `0 60px 120px -70px ${hexA(shade(a, -0.6), 0.55)}`, clipPath: 'polygon(2% 0,100% 3%,97% 100%,0 95%)' }} />
+          <div style={{ position: 'absolute', left: '7%', right: '7%', top: '30%', bottom: '26%', background: cream, transform: 'rotate(-1deg)', boxShadow: `0 80px 150px -70px ${hexA(shade(a, -0.55), 0.5)}`, clipPath: 'polygon(0 6%,100% 0,99% 94%,1% 100%)' }} />
+          <div style={{ position: 'absolute', left: '40%', right: '40%', top: '22%', height: '5%', background: hexA(a, 0.28), border: `2px solid ${hexA('#ffffff', 0.45)}`, transform: 'rotate(-4deg)' }} />
+          <AbsoluteFill style={{ background: `radial-gradient(60% 34% at 50% 50%, ${hexA('#ffffff', 0.32)}, transparent 76%)` }} />
+          {grain}
+        </AbsoluteFill>
+      )
+    }
     default: // 'mesh' — BrandField v3 (honours the tone)
       return <BrandField accent={a} frame={frame} tone={tone} />
   }
@@ -492,8 +508,15 @@ export const Beat: React.FC<{
       : (tone === 'light' ? shade(fx, -0.52) : (tone === 'deep' ? '#FFFFFF' : idealText(fx)))
     // On the light field, preset text colours designed for dark grounds (cream/white)
     // would vanish - override textColor to the tone's ink for this beat only.
+    // The ground is light when the TONE says so OR when the chosen field STYLE is a light
+    // treatment. Keying only off `tone` was a live readability bug: the storyboard sets
+    // field_style WITHOUT field_tone (generate/page.tsx), so tone fell back to deep/rich,
+    // this patch never ran, and the preset's cream/white caption colour stayed put on a
+    // cream ground - e.g. Silk + pop rendered #FFFFFF on pale mint. Found 2026-08-12 by
+    // rendering a still, not by reading the code.
+    const groundIsLight = tone === 'light' || (!!fieldStyle && FIELD_LIGHT_STYLES.has(fieldStyle))
     let cfg = captionConfig
-    if (tone === 'light' && cfg) {
+    if (groundIsLight && cfg) {
       const patched: any = {}
       for (const k of Object.keys(cfg)) { const v = (cfg as any)[k]; patched[k] = v && v.textColor ? { ...v, textColor: textCol } : v }
       cfg = patched
