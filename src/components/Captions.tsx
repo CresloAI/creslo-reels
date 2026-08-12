@@ -255,12 +255,17 @@ export const Captions: React.FC<{
         const grow = interpolate(enter, [0, 1], [0.7, 1])
         const isActive = cfg.activeFx !== 'none' && emph.has(i)
         const pop = isActive && (cfg.activeFx === 'color' || cfg.activeFx === 'highlight') ? 1.08 : 1
+        // Elastic keyword reveal (2026-07-31, activeFx 'stretch'): the emphasised word springs
+        // from compressed to full width on the SAME enter spring — the 2026 elastic-type move —
+        // resolving to a settled 1x (no distortion at rest). Origin stays centred so siblings
+        // never reflow and nothing clips. MUST stay byte-identical in both composition mirrors.
+        const stretchX = isActive && cfg.activeFx === 'stretch' ? interpolate(enter, [0, 1], [0.52, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) : 1
         // Font pairing: the emphasised (keyword) word uses the display font; the rest use the body font.
         const ws: React.CSSProperties = {
           display: 'inline-block', fontFamily: fam((cfg.fontSecondary && emph.has(i)) ? cfg.fontSecondary : cfg.font), fontWeight: cfg.weight, fontSize, lineHeight: 1.04,
           letterSpacing: isHook ? '-0.01em' : '0.005em', textTransform: cfg.uppercase ? 'uppercase' : 'none',
           color: cfg.textColor, opacity: enter,
-          transform: `translateY(${translateY}px) scale(${grow * pop})`,
+          transform: `translateY(${translateY}px) scale(${grow * pop}) scaleX(${stretchX})`,
           WebkitTextStroke: cfg.stroke ? `${Math.max(1, fontSize * 0.012)}px rgba(0,0,0,0.85)` : undefined,
           paintOrder: 'stroke',
           textShadow: '0 4px 18px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.7)',
@@ -272,7 +277,7 @@ export const Captions: React.FC<{
           ws.padding = `0 ${fontSize * 0.14}px`
           ws.borderRadius = `${fontSize * 0.22}px`
         }
-        if (isActive && cfg.activeFx === 'color') ws.color = dec
+        if (isActive && (cfg.activeFx === 'color' || cfg.activeFx === 'stretch')) ws.color = dec
         if (isActive && cfg.activeFx === 'box') {
           ws.background = dec
           ws.color = idealText(dec)

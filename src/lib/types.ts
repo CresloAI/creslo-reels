@@ -47,7 +47,7 @@ export type StyleConfig = {
   placement: 'center' | 'lowerThird'
   reveal: 'wordSpring' | 'typewriter' | 'fade'
   // strike/underline (Studio v2 slice 2): animated accent sweep on the emphasised word.
-  activeFx: 'none' | 'color' | 'box' | 'highlight' | 'strike' | 'underline'
+  activeFx: 'none' | 'color' | 'box' | 'highlight' | 'strike' | 'underline' | 'stretch'
   stroke: boolean
   band?: { fill: string; accentEdge: string }
 }
