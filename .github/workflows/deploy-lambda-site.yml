@@ -1,0 +1,68 @@
+# Deploy the Remotion Lambda site for Creslo reels.
+#
+# WHY THIS IS MANUAL (workflow_dispatch) AND NOT ON PUSH:
+# This bundle is what actually renders customers' reels. Deploying on every push to main
+# would put reel visuals in front of paying customers the moment code merged, with nobody
+# having looked at a rendered frame — the exact thing the "never design blind" rule exists
+# to stop. Paper Cut and Heritage Serif sat uncommitted for three weeks precisely because
+# they had never been looked at; auto-deploy would have shipped them unseen.
+#
+# So: you still decide WHEN. This only makes the HOW one click, identical every time,
+# and impossible to mistype.
+#
+# HOW TO RUN IT:
+#   GitHub -> the creslo-reels repo -> Actions tab -> "Deploy Lambda site"
+#   -> "Run workflow" -> Run workflow.
+#
+# ONE-TIME SETUP (you do this, not Claude — these are credentials):
+#   GitHub -> repo -> Settings -> Secrets and variables -> Actions -> New repository secret
+#     REMOTION_AWS_ACCESS_KEY_ID       (same value Railway uses)
+#     REMOTION_AWS_SECRET_ACCESS_KEY   (same value Railway uses)
+#   Nothing else. Region and site name are not secret and are set below.
+#
+# AFTER IT RUNS: the site URL it prints must match REMOTION_SERVE_URL in the Railway
+# backend env. It will, as long as the site name stays "creslo-reels" — the deploy
+# overwrites the existing site in place rather than creating a new URL.
+
+name: Deploy Lambda site
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Have you looked at the rendered frames for anything new in this deploy? Type yes.'
+        required: true
+        default: 'no'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse to deploy unverified visuals
+        if: ${{ inputs.confirm != 'yes' }}
+        run: |
+          echo "::error::Deploy stopped. Look at the rendered frames first, then re-run and type 'yes'."
+          echo "Local check:  npm run studio   (serves your working tree, not the deployed bundle)"
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Deploy site to Lambda
+        env:
+          REMOTION_AWS_ACCESS_KEY_ID: ${{ secrets.REMOTION_AWS_ACCESS_KEY_ID }}
+          REMOTION_AWS_SECRET_ACCESS_KEY: ${{ secrets.REMOTION_AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
+        run: npx remotion lambda sites create src/index.ts --site-name=creslo-reels
+
+      - name: Reminder
+        run: |
+          echo "Site deployed as 'creslo-reels'."
+          echo "Check the URL above matches REMOTION_SERVE_URL in the Railway backend env."
