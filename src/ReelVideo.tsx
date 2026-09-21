@@ -8,6 +8,39 @@ import { buildBeats, TRANSITION_FRAMES, CAPTION_STYLE_KEYS, type ReelData, type 
 // original 3 styles, so the 5 newer styles only ever render when explicitly picked.
 const FALLBACK_STYLES = ['pop', 'karaoke', 'clean'] as const
 
+// ---- CUT PRESENTATIONS (Reels v3 cut engine) ----
+// Module scope on purpose: a presentation's component must keep the same identity from frame to
+// frame. Declared inside ReelVideo, each frame produced a brand-new component type and React
+// tore down and rebuilt everything inside it - harmless on Lambda (every frame is rendered on its
+// own) but in the browser preview the clip videos were destroyed and reloaded ~10 times a second,
+// showing black and stalling playback. Found 2026-09-21. Output is unchanged: same maths, same
+// props, only where the functions live. MUST stay identical to the mirror.
+type CutPresentation = TransitionPresentation<Record<string, unknown>>
+type CutProps<P> = { children: React.ReactNode; presentationDirection: 'entering' | 'exiting'; presentationProgress: number; passedProps: P }
+const outCubic = (p: number) => 1 - Math.pow(1 - p, 3)
+const WhipPanCut: React.FC<CutProps<{ dir: 1 | -1 }>> = ({ children, presentationDirection, presentationProgress, passedProps }) => {
+  const dir = passedProps.dir
+  const p = outCubic(presentationProgress)
+  const blur = Math.sin(presentationProgress * Math.PI) * 22
+  const x = presentationDirection === 'entering' ? (1 - p) * 100 * dir : -p * 100 * dir
+  return <AbsoluteFill style={{ transform: `translateX(${x}%)`, filter: `blur(${blur}px)` }}>{children}</AbsoluteFill>
+}
+const PunchInCut: React.FC<CutProps<{ strength: number }>> = ({ children, presentationDirection, presentationProgress, passedProps }) => {
+  const strength = passedProps.strength
+  const p = outCubic(presentationProgress)
+  if (presentationDirection === 'exiting') {
+    return <AbsoluteFill style={{ opacity: 1 - p, transform: `scale(${1 + 0.05 * p})` }}>{children}</AbsoluteFill>
+  }
+  return <AbsoluteFill style={{ transform: `scale(${1 + strength * (1 - p)})`, filter: `brightness(${1 + 0.16 * (1 - p)})` }}>{children}</AbsoluteFill>
+}
+const LumaDriftCut: React.FC<CutProps<Record<string, never>>> = ({ children, presentationDirection, presentationProgress }) => {
+  const p = presentationProgress
+  if (presentationDirection === 'exiting') {
+    return <AbsoluteFill style={{ opacity: 1 - p, transform: `scale(${1 + 0.03 * p})` }}>{children}</AbsoluteFill>
+  }
+  return <AbsoluteFill style={{ opacity: p, transform: `scale(${1.035 - 0.035 * p})` }}>{children}</AbsoluteFill>
+}
+
 export const ReelVideo: React.FC<ReelData> = (reel) => {
   const { fps, durationInFrames } = useVideoConfig()
   const frame = useCurrentFrame()
@@ -33,37 +66,13 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
   // and the landing cut into the final beat is always a punch. Legacy mood-preset
   // keys map onto the new families so existing reels upgrade automatically.
   // MUST stay identical to the mirror (creslo-frontend/src/remotion/ReelVideo.tsx).
-  type CutPresentation = TransitionPresentation<Record<string, unknown>>
-  const outCubic = (p: number) => 1 - Math.pow(1 - p, 3)
-  const whipPan = (dir: 1 | -1): CutPresentation => ({
-    component: ({ children, presentationDirection, presentationProgress }) => {
-      const p = outCubic(presentationProgress)
-      const blur = Math.sin(presentationProgress * Math.PI) * 22
-      const x = presentationDirection === 'entering' ? (1 - p) * 100 * dir : -p * 100 * dir
-      return <AbsoluteFill style={{ transform: `translateX(${x}%)`, filter: `blur(${blur}px)` }}>{children}</AbsoluteFill>
-    },
-    props: {},
-  })
-  const punchIn = (strength = 0.14): CutPresentation => ({
-    component: ({ children, presentationDirection, presentationProgress }) => {
-      const p = outCubic(presentationProgress)
-      if (presentationDirection === 'exiting') {
-        return <AbsoluteFill style={{ opacity: 1 - p, transform: `scale(${1 + 0.05 * p})` }}>{children}</AbsoluteFill>
-      }
-      return <AbsoluteFill style={{ transform: `scale(${1 + strength * (1 - p)})`, filter: `brightness(${1 + 0.16 * (1 - p)})` }}>{children}</AbsoluteFill>
-    },
-    props: {},
-  })
-  const lumaDrift = (): CutPresentation => ({
-    component: ({ children, presentationDirection, presentationProgress }) => {
-      const p = presentationProgress
-      if (presentationDirection === 'exiting') {
-        return <AbsoluteFill style={{ opacity: 1 - p, transform: `scale(${1 + 0.03 * p})` }}>{children}</AbsoluteFill>
-      }
-      return <AbsoluteFill style={{ opacity: p, transform: `scale(${1.035 - 0.035 * p})` }}>{children}</AbsoluteFill>
-    },
-    props: {},
-  })
+  // The three cut presentations are defined ONCE at module scope (see CUT PRESENTATIONS above
+  // ReelVideo). Building them in here made a new component type on every frame, which made
+  // React remount the whole scene - clip <video> included - many times a second in the
+  // browser preview. whipPan / punchIn / lumaDrift below only choose the props.
+  const whipPan = (dir: 1 | -1): CutPresentation => ({ component: WhipPanCut as any, props: { dir } })
+  const punchIn = (strength = 0.14): CutPresentation => ({ component: PunchInCut as any, props: { strength } })
+  const lumaDrift = (): CutPresentation => ({ component: LumaDriftCut as any, props: {} })
   // Families are ordered so the +3 step below never lands the same cut twice running.
   const KINETIC: CutPresentation[] = [whipPan(1), punchIn(), whipPan(-1), lumaDrift()]
   const SOFT: CutPresentation[] = [lumaDrift(), punchIn(0.08), lumaDrift(), punchIn(0.06)]
