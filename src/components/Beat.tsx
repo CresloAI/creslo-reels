@@ -487,6 +487,14 @@ export const Beat: React.FC<{
   const k = Math.max(0, kbI)
   const scale = interpolate(frame, [0, durationInFrames], [1 + 0.06 * k, 1 + 0.16 * k], { extrapolateRight: 'clamp' })
   const panX = interpolate(frame, [0, durationInFrames], [0, 22 * dir * k], { extrapolateRight: 'clamp' })
+  // Reels v3 craft law (2026-09-21): nothing sits static past ~3.5s. Footage beats
+  // longer than that get a punch-in RESET at their midpoint - a 7-frame zoom snap
+  // with a brightness kiss that re-hooks the eye, then the Ken Burns drift carries
+  // on from the tighter framing. Deterministic; mirrors byte-identical.
+  const resetAt = durationInFrames > 3.5 * fps ? Math.round(durationInFrames / 2) : -1
+  const resetP = resetAt > 0 ? interpolate(frame, [resetAt, resetAt + 7], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) : 0
+  const resetScale = 1 + 0.055 * (1 - Math.pow(1 - resetP, 3))
+  const resetGlow = resetAt > 0 ? Math.sin(resetP * Math.PI) * 0.1 : 0
   // Colour grade over the clip layer (reel.grade -> GRADE_PRESETS). Absent -> no filter.
   const gradeFilter = grade && GRADE_PRESETS[grade] ? GRADE_PRESETS[grade] : undefined
 
@@ -626,7 +634,7 @@ export const Beat: React.FC<{
   }
   return (
     <AbsoluteFill style={{ opacity, backgroundColor: '#000' }}>
-      <AbsoluteFill style={{ transform: `scale(${scale}) translateX(${panX}px)`, filter: gradeFilter }}>
+      <AbsoluteFill style={{ transform: `scale(${scale * resetScale}) translateX(${panX}px)`, filter: [gradeFilter, resetGlow > 0.001 ? `brightness(${1 + resetGlow})` : ''].filter(Boolean).join(' ') || undefined }}>
         {clipUrl && !clipFailed ? (
           <OffthreadVideo src={clipUrl} muted onError={() => setClipFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (

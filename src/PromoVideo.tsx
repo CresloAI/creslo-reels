@@ -15,7 +15,7 @@
 // scale, every element animatable). Real app screenshots can replace the screen via
 // staticFile('promo/…') later without changing the choreography.
 import React from 'react'
-import { AbsoluteFill, Audio, Sequence, useCurrentFrame, useVideoConfig, interpolate, spring, staticFile, Img } from 'remotion'
+import { AbsoluteFill, Audio, OffthreadVideo, Sequence, useCurrentFrame, useVideoConfig, interpolate, spring, staticFile, Img } from 'remotion'
 import { loadFont as loadDMSerifDisplay } from '@remotion/google-fonts/DMSerifDisplay'
 import { loadFont as loadDMSans } from '@remotion/google-fonts/DMSans'
 
@@ -32,7 +32,7 @@ const SURFACE = '#FFFDF7'
 export const PROMO_FPS = 30
 export const PROMO_W = 1080
 export const PROMO_H = 1920
-export const PROMO_FRAMES = 585 // ~19.5s — retention cut (was 28s)
+export const PROMO_FRAMES = 720 // ~24s — v2 breathing cut (Daniel 2026-07-11: v1 "too rushed"); beats retimed to the slower 0.92 VO read
 
 // ---------- shared bits ----------
 const Center: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
@@ -61,9 +61,19 @@ const Headline: React.FC<{ text: string; size?: number; color?: string; delay?: 
 }
 
 // ---------- 1+2: hook & the turn of phrase ----------
-const Hook: React.FC = () => (
+// v2: opens on REAL footage of a business owner at work (public/promo/opener.mp4,
+// fetched by scripts/promo-footage.mjs) — grounds the film in the real world.
+// Null-safe: without the file it renders the original cream type card.
+const Hook: React.FC<{ footage?: string | null }> = ({ footage }) => (
   <AbsoluteFill style={{ background: CREAM }}>
-    <Center><Headline text="Running a business is a full-time job." /></Center>
+    {footage ? (
+      <>
+        <OffthreadVideo src={staticFile(footage)} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {/* readability scrim — cream type always sits on a committed dark ground */}
+        <AbsoluteFill style={{ background: 'linear-gradient(180deg, rgba(43,35,32,.30), rgba(43,35,32,.58) 62%, rgba(43,35,32,.72))' }} />
+      </>
+    ) : null}
+    <Center><Headline text="Running a business is a full-time job." color={footage ? CREAM : INK} /></Center>
   </AbsoluteFill>
 )
 
@@ -99,8 +109,9 @@ const PAIN_LINES = ['Write the posts.', 'Find the photos.', 'Design the adverts.
 const Pain: React.FC = () => {
   const frame = useCurrentFrame()
   const { fps, durationInFrames } = useVideoConfig()
-  // Each line gets a shrinking slot — the montage accelerates.
-  const slots = [26, 23, 20, 18, 23]
+  // Each line gets a shrinking slot — the montage accelerates. (v2: slots scaled up
+  // to the 135-frame beat so the montage urgency stays but nothing feels frantic.)
+  const slots = [32, 28, 24, 22, 29]
   const starts = slots.map((_, i) => slots.slice(0, i).reduce((a, b) => a + b, 0))
   // Background darkens as the overwhelm builds.
   const dark = interpolate(frame, [0, durationInFrames], [0, 1])
@@ -147,6 +158,37 @@ const POSTS = [
   { title: 'Wednesday - Facebook', body: 'Meet the team: 15 years of craft', tag: 'Scheduled' },
   { title: 'Thursday - TikTok', body: 'Reel: 3 things nobody tells you', tag: 'Posted' },
 ]
+// v2: REAL app screenshots inside the phone (Daniel 2026-07-11 — kills the "AI made"
+// look). Each screen slides up like the app scrolling itself; a ✓ badge stamps per
+// screen. Drop phone screenshots into public/promo/screens/ (1.png, 2.png, …) and
+// pass them via props; without them the drawn mock below still renders.
+// Badges adapt to how many screens Daniel supplies (2 tells "Scheduled → Posted").
+const tagsFor = (n: number) => n >= 4 ? ['Written', 'Designed', 'Scheduled', 'Posted'] : n === 3 ? ['Written', 'Scheduled', 'Posted'] : ['Scheduled', 'Posted']
+// The raw phone screenshots keep their Android chrome; the composition crops it —
+// top ~4.7% (status bar) and bottom ~2.8% (gesture strip) fall outside the mask.
+const SHOT_STYLE: React.CSSProperties = { position: 'absolute', left: 0, width: '100%', top: '-5%', height: '108%', objectFit: 'cover', objectPosition: 'top' }
+const ScreenShots: React.FC<{ appear: number; screens: string[] }> = ({ appear, screens }) => {
+  const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const SLICE = 64 // frames per screenshot (~2.1s each — reads calm, not rushed)
+  const local = Math.max(0, frame - appear)
+  const idx = Math.min(screens.length - 1, Math.floor(local / SLICE))
+  const t = local - idx * SLICE
+  const slide = spring({ frame: t, fps, config: { damping: 17, mass: 0.7, stiffness: 130 } })
+  const tick = spring({ frame: t - 14, fps, config: { damping: 9, mass: 0.4, stiffness: 280 } })
+  const prev = idx > 0 ? screens[idx - 1] : null
+  const TAGS = tagsFor(screens.length)
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative', background: CREAM, overflow: 'hidden' }}>
+      {prev && <Img src={staticFile(prev)} style={SHOT_STYLE} />}
+      <Img src={staticFile(screens[idx])} style={{ ...SHOT_STYLE, transform: `translateY(${interpolate(slide, [0, 1], [idx === 0 ? 0 : 100, 0])}%)` }} />
+      <div style={{ position: 'absolute', bottom: 88, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `scale(${tick})` }}>
+        <span style={{ fontFamily: sans, fontSize: 26, fontWeight: 800, color: '#fff', background: BROWN, borderRadius: 100, padding: '10px 26px', boxShadow: '0 16px 36px -14px rgba(43,35,32,.65)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>✓ {TAGS[Math.min(idx, TAGS.length - 1)]}</span>
+      </div>
+    </div>
+  )
+}
+
 const PhoneScreen: React.FC<{ appear: number }> = ({ appear }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
@@ -191,7 +233,7 @@ const PhoneScreen: React.FC<{ appear: number }> = ({ appear }) => {
   )
 }
 
-const Phone: React.FC<{ rise: number; tilt: number; appear: number }> = ({ rise, tilt, appear }) => {
+const Phone: React.FC<{ rise: number; tilt: number; appear: number; screens?: string[] | null }> = ({ rise, tilt, appear, screens }) => {
   const W = 560, H = 1180
   return (
     <div style={{
@@ -204,7 +246,7 @@ const Phone: React.FC<{ rise: number; tilt: number; appear: number }> = ({ rise,
         boxShadow: '0 60px 120px -40px rgba(43,35,32,.55), inset 0 0 0 3px #3A332E',
       }} />
       <div style={{ position: 'absolute', inset: 14, borderRadius: 62, overflow: 'hidden', background: CREAM }}>
-        <PhoneScreen appear={appear} />
+        {screens && screens.length ? <ScreenShots appear={appear} screens={screens} /> : <PhoneScreen appear={appear} />}
       </div>
       {/* notch */}
       <div style={{ position: 'absolute', top: 26, left: '50%', transform: 'translateX(-50%)', width: 150, height: 34, borderRadius: 100, background: '#141210' }} />
@@ -213,7 +255,7 @@ const Phone: React.FC<{ rise: number; tilt: number; appear: number }> = ({ rise,
 }
 
 // ---------- 4: the turn ----------
-const Turn: React.FC = () => {
+const Turn: React.FC<{ screens?: string[] | null }> = ({ screens }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   const rise = spring({ frame, fps, config: { damping: 15, mass: 0.7, stiffness: 120 } })
@@ -224,7 +266,7 @@ const Turn: React.FC = () => {
         <div style={{ fontFamily: serif, fontSize: 88, color: INK }}>Creslo does it <span style={{ color: BROWN }}>for you.</span></div>
       </div>
       <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 90 }}>
-        <Phone rise={rise} tilt={0} appear={16} />
+        <Phone rise={rise} tilt={0} appear={16} screens={screens} />
       </AbsoluteFill>
     </AbsoluteFill>
   )
@@ -327,16 +369,17 @@ const Cta: React.FC = () => {
 //   npx remotion render CresloPromo out/creslo-promo.mp4 \
 //     --props='{"voiceover":"promo/vo.mp3","music":"promo/music.mp3"}' --crf=17 --jpeg-quality=95
 // (VO script + per-beat timings: Creslo/04 Marketing/Reels-Launch-Pack.md §1.)
-export type PromoProps = { voiceover?: string | null; music?: string | null; musicVolume?: number }
-export const PromoVideo: React.FC<PromoProps> = ({ voiceover = null, music = null, musicVolume = 0.22 }) => (
+export type PromoProps = { voiceover?: string | null; music?: string | null; musicVolume?: number; footage?: string | null; screens?: string[] | null }
+// v2 timeline (~24s @ 30fps) — retimed to the slower 0.92 read; every beat breathes.
+export const PromoVideo: React.FC<PromoProps> = ({ voiceover = null, music = null, musicVolume = 0.22, footage = null, screens = null }) => (
   <AbsoluteFill style={{ background: CREAM }}>
     {music ? <Audio src={staticFile(music)} volume={musicVolume} /> : null}
     {voiceover ? <Audio src={staticFile(voiceover)} /> : null}
-    <Sequence durationInFrames={55}><Hook /></Sequence>
-    <Sequence from={55} durationInFrames={65}><SoIs /></Sequence>
-    <Sequence from={120} durationInFrames={110}><Pain /></Sequence>
-    <Sequence from={230} durationInFrames={155}><Turn /></Sequence>
-    <Sequence from={385} durationInFrames={110}><Proof /></Sequence>
-    <Sequence from={495} durationInFrames={90}><Cta /></Sequence>
+    <Sequence durationInFrames={75}><Hook footage={footage} /></Sequence>
+    <Sequence from={75} durationInFrames={75}><SoIs /></Sequence>
+    <Sequence from={150} durationInFrames={135}><Pain /></Sequence>
+    <Sequence from={285} durationInFrames={190}><Turn screens={screens} /></Sequence>
+    <Sequence from={475} durationInFrames={125}><Proof /></Sequence>
+    <Sequence from={600} durationInFrames={120}><Cta /></Sequence>
   </AbsoluteFill>
 )

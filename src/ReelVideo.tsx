@@ -1,9 +1,6 @@
 import React from 'react'
 import { AbsoluteFill, Audio, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
-import { TransitionSeries, linearTiming } from '@remotion/transitions'
-import { fade } from '@remotion/transitions/fade'
-import { slide } from '@remotion/transitions/slide'
-import { wipe } from '@remotion/transitions/wipe'
+import { TransitionSeries, linearTiming, type TransitionPresentation } from '@remotion/transitions'
 import { Beat } from './components/Beat'
 import { buildBeats, TRANSITION_FRAMES, CAPTION_STYLE_KEYS, type ReelData, type CaptionStyle } from './lib/types'
 
@@ -28,33 +25,70 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
     ? (reel.captionStyle as CaptionStyle)
     : FALLBACK_STYLES[seed % FALLBACK_STYLES.length]
 
-  const presentations = [
-    fade(),
-    slide({ direction: 'from-right' }),
-    slide({ direction: 'from-bottom' }),
-    wipe({ direction: 'from-right' }),
-  ]
-  // Per-preset transitions: reel.transition (set by the mood preset) picks the presentation;
-  // absent or unknown key -> the per-reel hash-select below. Keys are transition-type names.
-  const TRANSITION_MAP = {
-    'fade': fade(),
-    'slide-from-right': slide({ direction: 'from-right' }),
-    'slide-from-bottom': slide({ direction: 'from-bottom' }),
-    'wipe-from-right': wipe({ direction: 'from-right' }),
+  // ---- Reels v3 cut engine (2026-09-21, Daniel: premium cuts, "no AI slop") ----
+  // The stock fade/slide/wipe set is gone. Cuts are UGC-native: whip pans with motion
+  // blur, punch-in zoom snaps, and a drifting luma dissolve. Each CUT picks its own
+  // presentation from the mood's family (ordered so consecutive cuts never repeat -
+  // variety guard), seeded from the reel's copy so preview and render always agree,
+  // and the landing cut into the final beat is always a punch. Legacy mood-preset
+  // keys map onto the new families so existing reels upgrade automatically.
+  // MUST stay identical to the mirror (creslo-frontend/src/remotion/ReelVideo.tsx).
+  type CutPresentation = TransitionPresentation<Record<string, unknown>>
+  const outCubic = (p: number) => 1 - Math.pow(1 - p, 3)
+  const whipPan = (dir: 1 | -1): CutPresentation => ({
+    component: ({ children, presentationDirection, presentationProgress }) => {
+      const p = outCubic(presentationProgress)
+      const blur = Math.sin(presentationProgress * Math.PI) * 22
+      const x = presentationDirection === 'entering' ? (1 - p) * 100 * dir : -p * 100 * dir
+      return <AbsoluteFill style={{ transform: `translateX(${x}%)`, filter: `blur(${blur}px)` }}>{children}</AbsoluteFill>
+    },
+    props: {},
+  })
+  const punchIn = (strength = 0.14): CutPresentation => ({
+    component: ({ children, presentationDirection, presentationProgress }) => {
+      const p = outCubic(presentationProgress)
+      if (presentationDirection === 'exiting') {
+        return <AbsoluteFill style={{ opacity: 1 - p, transform: `scale(${1 + 0.05 * p})` }}>{children}</AbsoluteFill>
+      }
+      return <AbsoluteFill style={{ transform: `scale(${1 + strength * (1 - p)})`, filter: `brightness(${1 + 0.16 * (1 - p)})` }}>{children}</AbsoluteFill>
+    },
+    props: {},
+  })
+  const lumaDrift = (): CutPresentation => ({
+    component: ({ children, presentationDirection, presentationProgress }) => {
+      const p = presentationProgress
+      if (presentationDirection === 'exiting') {
+        return <AbsoluteFill style={{ opacity: 1 - p, transform: `scale(${1 + 0.03 * p})` }}>{children}</AbsoluteFill>
+      }
+      return <AbsoluteFill style={{ opacity: p, transform: `scale(${1.035 - 0.035 * p})` }}>{children}</AbsoluteFill>
+    },
+    props: {},
+  })
+  // Families are ordered so the +3 step below never lands the same cut twice running.
+  const KINETIC: CutPresentation[] = [whipPan(1), punchIn(), whipPan(-1), lumaDrift()]
+  const SOFT: CutPresentation[] = [lumaDrift(), punchIn(0.08), lumaDrift(), punchIn(0.06)]
+  const CUT_FAMILIES: Record<string, CutPresentation[]> = {
+    kinetic: KINETIC,
+    soft: SOFT,
+    // Legacy keys -> upgraded equivalents (reels saved with old presets get new cuts).
+    'fade': SOFT,
+    'slide-from-right': KINETIC,
+    'slide-from-bottom': KINETIC,
+    'wipe-from-right': KINETIC,
   }
-  const mapped = reel.transition ? TRANSITION_MAP[reel.transition] : undefined
-  const presentation = mapped || presentations[seed % presentations.length]
+  const family = (reel.transition && CUT_FAMILIES[reel.transition]) || (seed % 2 === 0 ? KINETIC : SOFT)
 
   // Build an alternating Sequence / Transition list for a smooth cut between beats.
   const children: React.ReactNode[] = []
   beats.forEach((b, i) => {
     const frames = Math.max(1, Math.round(b.seconds * fps))
     if (i > 0) {
+      const cut = i === beats.length - 1 ? punchIn(0.12) : family[(seed + i * 3) % family.length]
       children.push(
         <TransitionSeries.Transition
           key={`t${i}`}
           timing={linearTiming({ durationInFrames: TRANSITION_FRAMES })}
-          presentation={presentation}
+          presentation={cut}
         />
       )
     }

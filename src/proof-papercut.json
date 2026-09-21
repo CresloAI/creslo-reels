@@ -1,0 +1,55 @@
+{
+  "hook": {
+    "on_screen": "Quiet luxury, loud results",
+    "voiceover": "Proof frame for Paper Cut, Heritage Serif and the elastic keyword."
+  },
+  "scenes": [
+    {
+      "on_screen": "Every prototype has a moment of truth",
+      "voiceover": "Longer line to prove wrapping and word integrity on the torn panel.",
+      "clip_url": null,
+      "seconds": 3,
+      "field_style": "papercut",
+      "field_tone": "light",
+      "beat_type": "text"
+    },
+    {
+      "on_screen": "Extraordinary craftsmanship",
+      "voiceover": "Single long word to stress the elastic stretch reveal.",
+      "clip_url": null,
+      "seconds": 3,
+      "field_style": "papercut",
+      "field_tone": "light",
+      "beat_type": "text"
+    },
+    {
+      "on_screen": "One quiet hour that resets the whole week",
+      "voiceover": "Heritage Serif ground, cream keyword on deep jewel.",
+      "clip_url": null,
+      "seconds": 3,
+      "field_style": "silk",
+      "field_tone": "deep",
+      "beat_type": "text"
+    }
+  ],
+  "caption": "Proof render - not for publishing.",
+  "hashtags": [
+    "#proof"
+  ],
+  "audio": "none",
+  "brandColor": "#31695E",
+  "captionStyle": "pop",
+  "hookSeconds": 2.5,
+  "captionConfig": {
+    "pop": {
+      "font": "DM Sans",
+      "fontSecondary": "DM Serif Display",
+      "textColor": "#F5EFE0",
+      "weight": 600,
+      "uppercase": false,
+      "accent": "brand",
+      "activeFx": "stretch",
+      "stroke": true
+    }
+  }
+}

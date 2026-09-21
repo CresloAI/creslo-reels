@@ -34,18 +34,18 @@ function loadEnv() {
 }
 const { FAL_KEY, SUPABASE_URL } = loadEnv()
 
-// The narration — the APPROVED beat-timed script from
-// Creslo/04 Marketing/Reels-Launch-Pack.md §1 (reads ~19s at natural pace).
+// The narration — v2 (Daniel 2026-07-11: v1 read "too rushed / too AI"). Trimmed
+// words, slower read (0.92), beats retimed around it in PromoVideo.tsx.
 const VO_SCRIPT =
   'Running a business is a full-time job. So was social media. ' +
-  'The posts. The photos. The adverts. Every day. Every platform. ' +
-  'Creslo writes it, designs it, schedules it, and posts it — sounding like you. ' +
-  'Posts, images, adverts, and reels. On-brand, every day, while you work. ' +
+  'The posts. The photos. The adverts. Every single day. ' +
+  'Creslo writes it, designs it, and posts it — sounding like you. ' +
+  'On-brand, every day, while you work. ' +
   'Creslo. Grow — without the grind. Start free at creslo dot A I.'
 
-// Voice per the launch pack (bf_emma @ 1.02). Override:  PROMO_VOICE=bm_fable node scripts/promo-audio.mjs
+// Slower, warmer read. Override:  PROMO_VOICE=bm_fable PROMO_SPEED=0.9 node scripts/promo-audio.mjs
 const VOICE = process.env.PROMO_VOICE || 'bf_emma'
-const SPEED = Number(process.env.PROMO_SPEED || 1.02)
+const SPEED = Number(process.env.PROMO_SPEED || 0.92)
 
 const MODEL = 'fal-ai/kokoro/british-english'
 const APP_BASE = MODEL.split('/').slice(0, 2).join('/') // queue quirk: poll at app-id base

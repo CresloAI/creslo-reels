@@ -21,7 +21,8 @@ The Creslo logo is ALWAYS the rounded-square OUTLINE containing the serif "C." m
 
 ## PROOF CONSTANT (Daniel's standing order, 2026-07-10)
 Nothing is handed to Daniel or shipped to users unproofed. Full law: Creslo/02
-Product/Creslo-Creative-Doctrine.md sections 1.5-1.6. The short version:
+Product/Creslo-Creative-Doctrine.md sections 1.5-1.8 (§1.7 Ad Charter + §1.8 Agency
+Design Spec are LAW for every composition and export in this repo). The short version:
 1. BEFORE presenting any artifact: run the mechanical lint (markup balance, defined
    animations, rotate-flatten, smart-layer content zone) AND look at it.
 2. AFTER any deploy (Vercel UI / Lambda site): the AGENT verifies the deployed result
