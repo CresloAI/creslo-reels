@@ -79,6 +79,9 @@ export type ReelData = {
   // v2 inert plumbing (passed through buildReelRenderProps; the render half consumes these
   // later. Absent -> current behaviour). Shapes are placeholders, refined when each is built.
   transition?: string
+  // SFX base URL (phase 4): where the composition finds sfx-whoosh/punch/riser.mp3.
+  // Absent -> silent cuts (fail-open; the backend only sets it once the kit exists).
+  sfxBase?: string | null
   header?: { text?: string; enabled?: boolean } | null
   grade?: string | null
   kenBurns?: { enabled?: boolean; intensity?: number } | null

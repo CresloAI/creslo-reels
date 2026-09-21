@@ -1,5 +1,5 @@
 import React from 'react'
-import { AbsoluteFill, Audio, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
+import { AbsoluteFill, Audio, Sequence, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
 import { TransitionSeries, linearTiming, type TransitionPresentation } from '@remotion/transitions'
 import { Beat } from './components/Beat'
 import { buildBeats, TRANSITION_FRAMES, CAPTION_STYLE_KEYS, type ReelData, type CaptionStyle } from './lib/types'
@@ -74,9 +74,11 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
   const punchIn = (strength = 0.14): CutPresentation => ({ component: PunchInCut as any, props: { strength } })
   const lumaDrift = (): CutPresentation => ({ component: LumaDriftCut as any, props: {} })
   // Families are ordered so the +3 step below never lands the same cut twice running.
-  const KINETIC: CutPresentation[] = [whipPan(1), punchIn(), whipPan(-1), lumaDrift()]
-  const SOFT: CutPresentation[] = [lumaDrift(), punchIn(0.08), lumaDrift(), punchIn(0.06)]
-  const CUT_FAMILIES: Record<string, CutPresentation[]> = {
+  // Each cut carries its KIND so the SFX layer knows what sound rides under it.
+  type Cut = { kind: 'whip' | 'punch' | 'drift'; p: CutPresentation }
+  const KINETIC: Cut[] = [{ kind: 'whip', p: whipPan(1) }, { kind: 'punch', p: punchIn() }, { kind: 'whip', p: whipPan(-1) }, { kind: 'drift', p: lumaDrift() }]
+  const SOFT: Cut[] = [{ kind: 'drift', p: lumaDrift() }, { kind: 'punch', p: punchIn(0.08) }, { kind: 'drift', p: lumaDrift() }, { kind: 'punch', p: punchIn(0.06) }]
+  const CUT_FAMILIES: Record<string, Cut[]> = {
     kinetic: KINETIC,
     soft: SOFT,
     // Legacy keys -> upgraded equivalents (reels saved with old presets get new cuts).
@@ -87,17 +89,33 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
   }
   const family = (reel.transition && CUT_FAMILIES[reel.transition]) || (seed % 2 === 0 ? KINETIC : SOFT)
 
+  // Cut bookkeeping (phase 4 SFX): transition i starts where sequence i begins,
+  // i.e. cumulative frames minus the overlaps. Selected ONCE here so the visual
+  // cut and its sound can never disagree.
+  const seqFrames = beats.map(b => Math.max(1, Math.round(b.seconds * fps)))
+  const cuts: { at: number; cut: Cut }[] = []
+  {
+    let s = 0
+    beats.forEach((b, i) => {
+      if (i > 0) {
+        s -= TRANSITION_FRAMES
+        const cut: Cut = i === beats.length - 1 ? { kind: 'punch', p: punchIn(0.12) } : family[(seed + i * 3) % family.length]
+        cuts.push({ at: s, cut })
+      }
+      s += seqFrames[i]
+    })
+  }
+
   // Build an alternating Sequence / Transition list for a smooth cut between beats.
   const children: React.ReactNode[] = []
   beats.forEach((b, i) => {
-    const frames = Math.max(1, Math.round(b.seconds * fps))
+    const frames = seqFrames[i]
     if (i > 0) {
-      const cut = i === beats.length - 1 ? punchIn(0.12) : family[(seed + i * 3) % family.length]
       children.push(
         <TransitionSeries.Transition
           key={`t${i}`}
           timing={linearTiming({ durationInFrames: TRANSITION_FRAMES })}
-          presentation={cut}
+          presentation={cuts[i - 1].cut.p}
         />
       )
     }
@@ -134,6 +152,22 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
       <TransitionSeries>{children}</TransitionSeries>
+      {/* SFX on cuts (Reels v3 phase 4): whoosh under whips, a soft hit under punches,
+          a riser into the final beat; dissolves stay silent. Fail-open by design —
+          without reel.sfxBase (env-gated server-side) no sound is referenced, so a
+          render can never 404 on an asset that hasn't been generated yet.
+          MUST stay identical to the mirror. */}
+      {reel.sfxBase ? cuts.map((c, n) => {
+        const final = n === cuts.length - 1
+        const file = final ? 'sfx-riser.mp3' : c.cut.kind === 'whip' ? 'sfx-whoosh.mp3' : c.cut.kind === 'punch' ? 'sfx-punch.mp3' : null
+        if (!file) return null
+        const from = Math.max(0, final ? c.at - Math.round(fps * 0.8) : c.at - 2)
+        return (
+          <Sequence key={`sfx${n}`} from={from} durationInFrames={Math.round(fps * (final ? 2.2 : 1.5))}>
+            <Audio src={`${reel.sfxBase}/${file}`} volume={final ? 0.4 : 0.32} />
+          </Sequence>
+        )
+      }) : null}
       {/* Audio (Studio v2 slice 5): background music bed + optional narration track,
           mixed into the render. Music ducks to 25% by default so voiceover reads. */}
       {reel.music && reel.music.url ? <Audio src={reel.music.url} volume={typeof reel.music.volume === 'number' ? reel.music.volume : 0.25} /> : null}
