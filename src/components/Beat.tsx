@@ -640,6 +640,12 @@ export const Beat: React.FC<{
       <AbsoluteFill style={{ transform: `scale(${scale * resetScale}) translateX(${panX}px)`, filter: [gradeFilter, resetGlow > 0.001 ? `brightness(${1 + resetGlow})` : ''].filter(Boolean).join(' ') || undefined }}>
         {clipUrl && !clipFailed ? (
           <OffthreadVideo src={clipUrl} muted onError={() => setClipFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : poster ? (
+          // PHOTO BEAT (phase 11 intake lanes): a real still — the business's own menu,
+          // product or room — under the same Ken Burns drift the clips get (the parent
+          // transform). Doubles as the upgrade path for a FAILED clip fetch: the clip's
+          // poster frame reads far better than a bare gradient. MUST stay identical to the mirror.
+          <Img src={poster} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <AbsoluteFill
             style={{
