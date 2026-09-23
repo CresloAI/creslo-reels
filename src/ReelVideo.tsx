@@ -1,5 +1,5 @@
 import React from 'react'
-import { AbsoluteFill, Audio, Sequence, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
+import { AbsoluteFill, Audio, Sequence, useVideoConfig } from 'remotion'
 import { TransitionSeries, linearTiming, type TransitionPresentation } from '@remotion/transitions'
 import { Beat } from './components/Beat'
 import { buildBeats, TRANSITION_FRAMES, CAPTION_STYLE_KEYS, type ReelData, type CaptionStyle } from './lib/types'
@@ -42,8 +42,7 @@ const LumaDriftCut: React.FC<CutProps<Record<string, never>>> = ({ children, pre
 }
 
 export const ReelVideo: React.FC<ReelData> = (reel) => {
-  const { fps, durationInFrames } = useVideoConfig()
-  const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
   const accent = reel.brandColor || '#E8743B'
   const beats = buildBeats(reel)
 
@@ -147,7 +146,6 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
     )
   })
 
-  const progress = interpolate(frame, [0, durationInFrames], [0, 100], { extrapolateRight: 'clamp' })
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
@@ -173,10 +171,10 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
       {reel.music && reel.music.url ? <Audio src={reel.music.url} volume={typeof reel.music.volume === 'number' ? reel.music.volume : 0.25} /> : null}
       {reel.voiceoverUrl ? <Audio src={reel.voiceoverUrl} /> : null}
 
-      {/* trendy progress bar */}
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 8, background: 'rgba(255,255,255,0.18)' }}>
-        <div style={{ width: `${progress}%`, height: '100%', background: accent }} />
-      </div>
+      {/* The burnt-in progress bar came out here on 2026-09-23 (Daniel). It was drawn INTO the
+          video, so it followed the reel onto Instagram and TikTok, where no other reel has one -
+          and those platforms draw their own. The live preview still has its scrub line, which is
+          ours and stays on the page only. MUST stay identical to the app's copy. */}
     </AbsoluteFill>
   )
 }
