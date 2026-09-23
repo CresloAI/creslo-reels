@@ -136,7 +136,11 @@ export const Captions: React.FC<{
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   emphasis?: number[]
   zone?: 'top' | 'middle' | 'bottom'
-}> = ({ text, accent, isHook, style = 'pop', durationInFrames, captionConfig, emphasis, zone }) => {
+  // Speech-synced pacing (phase 9): this beat's spoken span in frames LOCAL to the
+  // beat. When present, word reveals pace evenly across the REAL speech and land as
+  // the line ends; absent -> the fixed per-word stagger (original behaviour).
+  speech?: { start: number; end: number }
+}> = ({ text, accent, isHook, style = 'pop', durationInFrames, captionConfig, emphasis, zone, speech }) => {
   const frame = useCurrentFrame()
   const { fps, width } = useVideoConfig()
   const full = String(text || '').trim()
@@ -247,10 +251,21 @@ export const Captions: React.FC<{
       </div>
     )
   }
+  // Speech-synced word entry (phase 9): with a spoken span, word i starts at its even
+  // share of [start, end] so the last word lands as the voice finishes the line —
+  // clamped inside the reveal window so the caption is always complete before the
+  // cross-scene transition, whatever the audio says.
+  const wordEntry = (i: number): number => {
+    if (!speech) return i * 2
+    const lastSafe = Math.max(10, revealFrames - 4)
+    const s0 = Math.max(0, Math.min(speech.start, lastSafe - 8))
+    const s1 = Math.max(s0 + 6, Math.min(speech.end, lastSafe))
+    return s0 + ((s1 - s0) * i) / Math.max(1, words.length - 1)
+  }
   return (
     <div style={wrap}>
       {words.map((w, i) => {
-        const enter = spring({ frame: frame - i * 2, fps, config: { damping: 14, mass: 0.6, stiffness: 140 } })
+        const enter = spring({ frame: frame - wordEntry(i), fps, config: { damping: 14, mass: 0.6, stiffness: 140 } })
         const translateY = interpolate(enter, [0, 1], [fontSize * 0.45, 0])
         const grow = interpolate(enter, [0, 1], [0.7, 1])
         const isActive = cfg.activeFx !== 'none' && emph.has(i)

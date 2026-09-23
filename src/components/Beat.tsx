@@ -471,7 +471,10 @@ export const Beat: React.FC<{
   fieldStyle?: string | null
   kenBurns?: { enabled?: boolean; intensity?: number } | null
   grade?: string | null
-}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, poster, brandName, brandLogo, brandWordmark, fieldTone, fieldColor, fieldStyle, kenBurns, grade }) => {
+  // Speech-synced captions (phase 9): this beat's spoken span in frames LOCAL to the
+  // beat (ReelVideo converts from track seconds). Passed through to Captions.
+  speech?: { start: number; end: number }
+}> = ({ text, isHook, clipUrl, accent, index, durationInFrames, captionStyle, captionConfig, emphasis, zone, beatType, poster, brandName, brandLogo, brandWordmark, fieldTone, fieldColor, fieldStyle, kenBurns, grade, speech }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   // A failed clip fetch (e.g. a Pexels CDN 503) flips this so the beat degrades to the branded
@@ -534,7 +537,7 @@ export const Beat: React.FC<{
         <FieldStage styleKey={fieldStyle} accent={fx} frame={frame} tone={tone} />
         {/* slow push-in keeps the type alive for the whole beat */}
         <div style={{ position: 'absolute', inset: 0, transform: `scale(${1 + (frame / Math.max(1, durationInFrames)) * 0.05})` }}>
-          <Captions text={text} accent={textCol} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={cfg} emphasis={emphasis} />
+          <Captions text={text} accent={textCol} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={cfg} emphasis={emphasis} speech={speech} />
         </div>
       </AbsoluteFill>
     )
@@ -563,7 +566,7 @@ export const Beat: React.FC<{
             <div style={{ position: 'absolute', top: 18, left: '50%', transform: 'translateX(-50%)', width: '26%', height: 22, borderRadius: 100, background: '#141210' }} />
           </div>
         </AbsoluteFill>
-        <Captions text={text} accent={accent} isHook={false} style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+        <Captions text={text} accent={accent} isHook={false} style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} speech={speech} />
       </AbsoluteFill>
     )
   }
@@ -627,7 +630,7 @@ export const Beat: React.FC<{
           <div style={{ width: 210 * rule, height: 3, borderRadius: 4, background: `linear-gradient(90deg, transparent, ${shade(fx, 0.4)}, transparent)`, opacity: rule, boxShadow: `0 0 ${14 + glow * 16}px ${hexA(shade(fx, 0.4), 0.9)}` }} />
         </div>
         <div style={{ position: 'absolute', inset: 0, transform: `scale(${breathe})` }}>
-          <Captions text={text} accent={fx} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} />
+          <Captions text={text} accent={fx} isHook style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} speech={speech} />
         </div>
       </AbsoluteFill>
     )
@@ -655,7 +658,7 @@ export const Beat: React.FC<{
         }}
       />
 
-      <Captions text={text} accent={accent} isHook={isHook} style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} zone={zone} />
+      <Captions text={text} accent={accent} isHook={isHook} style={captionStyle} durationInFrames={durationInFrames} captionConfig={captionConfig} emphasis={emphasis} zone={zone} speech={speech} />
     </AbsoluteFill>
   )
 }

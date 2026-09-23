@@ -73,6 +73,11 @@ export type ReelData = {
   // Audio plumbing (slice 5): background music + optional narration, mixed at render.
   music?: { url?: string; volume?: number } | null
   voiceoverUrl?: string | null
+  // Speech-synced captions (phase 9): per-beat spoken spans in SECONDS from the start
+  // of the voiceover track, one entry per composition beat (hook first), null where a
+  // beat has no spoken line. Captions pace their word reveals across the real span.
+  // Absent -> the fixed per-word stagger (current behaviour).
+  voiceoverTiming?: { beats?: ({ s: number; e: number } | null)[] } | null
   captionStyle?: CaptionStyle
   captionConfig?: Partial<Record<CaptionStyle, Partial<StyleConfig>>>
   hookSeconds?: number

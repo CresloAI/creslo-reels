@@ -93,6 +93,7 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
   // cut and its sound can never disagree.
   const seqFrames = beats.map(b => Math.max(1, Math.round(b.seconds * fps)))
   const cuts: { at: number; cut: Cut }[] = []
+  const beatStarts: number[] = []
   {
     let s = 0
     beats.forEach((b, i) => {
@@ -101,8 +102,20 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
         const cut: Cut = i === beats.length - 1 ? { kind: 'punch', p: punchIn(0.12) } : family[(seed + i * 3) % family.length]
         cuts.push({ at: s, cut })
       }
+      beatStarts.push(s)
       s += seqFrames[i]
     })
+  }
+
+  // Speech-synced captions (phase 9): the voiceover plays from frame 0, so a beat's
+  // spoken span (seconds on the track) converts to frames LOCAL to that beat by
+  // subtracting the beat's start. Only offered when the narration is actually in the
+  // mix — without voiceoverUrl the timings describe audio nobody hears.
+  const vt = (reel.voiceoverUrl && reel.voiceoverTiming && Array.isArray(reel.voiceoverTiming.beats)) ? reel.voiceoverTiming.beats : null
+  const speechFor = (i: number): { start: number; end: number } | undefined => {
+    const b = vt && vt[i]
+    if (!b || !Number.isFinite(b.s) || !Number.isFinite(b.e) || b.e <= b.s) return undefined
+    return { start: Math.round(b.s * fps) - beatStarts[i], end: Math.round(b.e * fps) - beatStarts[i] }
   }
 
   // Build an alternating Sequence / Transition list for a smooth cut between beats.
@@ -141,6 +154,7 @@ export const ReelVideo: React.FC<ReelData> = (reel) => {
           fieldStyle={b.fieldStyle}
           kenBurns={reel.kenBurns}
           grade={reel.grade}
+          speech={speechFor(i)}
         />
       </TransitionSeries.Sequence>
     )
